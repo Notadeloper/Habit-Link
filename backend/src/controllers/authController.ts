@@ -1,7 +1,7 @@
 import { RequestHandler } from "express";
 import bcrypt from "bcryptjs";
 import prisma from "../prismaClient";
-import { SignupRequestBody, LoginRequestBody } from "../interfaces/User";
+import { SignupRequestBody, LoginRequestBody } from "../interfaces/Auth";
 import { generateTokenAndSetCookie } from "../lib/utils/generateToken";
 
 const SALT_ROUNDS = 10;
@@ -90,7 +90,6 @@ export const login: RequestHandler = async (req, res) => {
 export const logout: RequestHandler = async (req, res) => {
     try {
         res.clearCookie("jwt", {
-            expires: new Date(0),
             path: "/",
             httpOnly: true,
             secure: process.env.NODE_ENV !== "development",

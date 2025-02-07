@@ -1,11 +1,7 @@
-export interface SignupRequestBody {
+export interface UpdateUserRequestBody {
     username: string;
     email: string;
     fullName: string;
-    password: string;
-}
-
-export interface LoginRequestBody {
-    usernameOrEmail: string;
-    password: string;
+    currentPassword: string;
+    newPassword: string;
 }

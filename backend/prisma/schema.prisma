@@ -1,8 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// This is your Prisma schema file
 
 generator client {
   provider = "prisma-client-js"
@@ -26,24 +22,23 @@ enum FrequencyPeriod {
 }
 
 model User {
-  id                     String          @id @default(uuid())
-  username               String          @unique
-  email                  String          @unique
-  password               String
-  fullName               String
-  created_at             DateTime        @default(now())
-  updated_at             DateTime        @updatedAt
-  habits                 Habit[]
-  habitTrackings         HabitTracking[]
-  memberships            Membership[]
-  sentFriendRequests     FriendRequest[] @relation("SentFriendRequests")
-  receivedFriendRequests FriendRequest[] @relation("ReceivedFriendRequests")
-  friendships            Friendship[]    @relation("UserFriendships") // Friendships initiated by the user
-  friendFriendships      Friendship[]    @relation("FriendFriendships") // Friendships where the user is the friend
-  sentMessages           Message[]       @relation("SentMessages")
-  receivedMessages       Message[]       @relation("ReceivedMessages")
-  streaks                Streak[]        @relation("UserStreaks")
-  groups                 Group[]         @relation("groups")
+  id                       String                    @id @default(uuid())
+  username                 String                    @unique
+  email                    String                    @unique
+  password                 String
+  fullName                 String
+  created_at               DateTime                  @default(now())
+  updated_at               DateTime                  @updatedAt
+  habits                   Habit[]
+  habitTrackings           HabitTracking[]
+  memberships              Membership[]
+  sentFriendRequests       FriendRequest[]           @relation("SentFriendRequests")
+  receivedFriendRequests   FriendRequest[]           @relation("ReceivedFriendRequests")
+  friendships              Friendship[]              @relation("UserFriendships") // Friendships initiated by the user
+  streaks                  Streak[]                  @relation("UserStreaks")
+  groups                   Group[]                   @relation("groups")
+  conversationParticipants ConversationParticipant[] // All conversation memberships for this user
+  Message                  Message[]
 }
 
 model Group {
@@ -56,7 +51,10 @@ model Group {
   updated_at  DateTime     @updatedAt
   memberships Membership[]
   habits      Habit[]
-  messages    Message[]
+  // Note: Group messages can be handled by creating a Conversation with isGroup = true.
+  // You might optionally store a reference to that conversation here if you want a direct link.
+  // conversationId String?
+  // conversation   Conversation? @relation(fields: [conversationId], references: [id])
 }
 
 model Membership {
@@ -159,22 +157,41 @@ model Streak {
   @@index([user_id])
 }
 
-model Message {
-  id          String   @id @default(uuid())
-  group       Group    @relation(fields: [group_id], references: [id])
-  group_id    String
-  sender      User     @relation("SentMessages", fields: [sender_id], references: [id])
-  sender_id   String
-  receiver    User?    @relation("ReceivedMessages", fields: [receiver_id], references: [id])
-  receiver_id String?
-  content     String
-  media_url   String?
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
-  is_deleted  Boolean  @default(false)
 
-  @@index([group_id])
-  @@index([sender_id])
-  @@index([receiver_id])
+model Conversation {
+  id           String                    @id @default(uuid())
+  isGroup      Boolean                   @default(false) // false for DMs, true for group chats
+  name         String? // Optional name for group conversations
+  created_at   DateTime                  @default(now())
+  updated_at   DateTime                  @updatedAt
+  messages     Message[]
+  participants ConversationParticipant[]
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId String
+  user           User         @relation(fields: [userId], references: [id])
+  userId         String
+  lastReadAt     DateTime? // Optional field to track when the participant last read messages
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversationId String
+  sender         User         @relation(fields: [senderId], references: [id])
+  senderId       String
+  content        String
+  media_url      String?
+  created_at     DateTime     @default(now())
+  updated_at     DateTime     @updatedAt
+  is_deleted     Boolean      @default(false)
+
+  @@index([conversationId])
+  @@index([senderId])
   @@index([created_at])
 }

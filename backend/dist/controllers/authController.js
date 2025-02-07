@@ -101,6 +101,7 @@ exports.login = login;
 const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         res.clearCookie("jwt", {
+            expires: new Date(0),
             path: "/",
             httpOnly: true,
             secure: process.env.NODE_ENV !== "development",
