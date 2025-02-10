@@ -1,7 +1,6 @@
 import { RequestHandler } from "express";
 import jwt from "jsonwebtoken";
 import prisma from "../prismaClient";
-import { User } from "@prisma/client";
 const { JWT_SECRET } = process.env;
 
 interface DecodedToken extends jwt.JwtPayload {
