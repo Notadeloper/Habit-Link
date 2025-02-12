@@ -2,15 +2,15 @@
 import { RequestHandler } from "express";
 import prisma from "../prismaClient";
 import bcrypt from "bcryptjs";
-import { UpdateUserRequestBody } from "../interfaces/User";
+import { UpdateUserRequestBody, UserUpdateData } from "../interfaces/User";
 
 export const getUserProfile: RequestHandler = async (req, res) => {
     try {
-        const { username } = req.params;
+        const { userId } = req.params;
         const loggedInUserId = req.user?.id;
 
         const targetUser = await prisma.user.findUnique({
-            where: { username },
+            where: { id: userId },
             select: {
                 id: true,
                 username: true,
@@ -79,7 +79,7 @@ export const updateUserProfile: RequestHandler = async (req, res) => {
             return;
         }
 
-        const updateData: any = {};
+        const updateData: UserUpdateData = {};
         
         if (fullName) updateData.fullName = fullName;
         if (email) updateData.email = email;
@@ -120,13 +120,19 @@ export const updateUserProfile: RequestHandler = async (req, res) => {
 
 export const viewFriends: RequestHandler = async (req, res) => {
     try {
-        const { username } = req.params;
+        const { userId } = req.params;
         const loggedInUserId = req.user?.id;
 
+        if (!loggedInUserId) {
+            res.status(401).json({ error: "Unauthorized: No user found in request" });
+            return;
+        }
+
         const targetUser = await prisma.user.findUnique({
-            where: { username },
+            where: { id: userId },
             select: {
                 id: true,
+                username: true,
                 friendships: true,
                 friendFriendships: true,
             },
@@ -148,7 +154,7 @@ export const viewFriends: RequestHandler = async (req, res) => {
             return;
         }
 
-        res.status(200).json({ username: username, friendList: totalFriendships });
+        res.status(200).json({ username: targetUser.username, friendList: totalFriendships });
     } catch (error) {
         if (error instanceof Error) {
             console.log("Error in viewFriends controller", error.message);
@@ -161,11 +167,11 @@ export const viewFriends: RequestHandler = async (req, res) => {
 
 export const getFriendRequests: RequestHandler = async (req, res) => {
     try {
-        const { userId } = req.params;
         const loggedInUserId = req.user?.id;
 
+        // We refetch for efficiency -> fetching additional data here instead of protect route
         const targetUser = await prisma.user.findUnique({
-            where: { id: userId },
+            where: { id: loggedInUserId },
             select: {
                 id: true,
                 username: true,
@@ -175,11 +181,6 @@ export const getFriendRequests: RequestHandler = async (req, res) => {
 
         if (!targetUser) {
             res.status(404).json({ error: "User not found" });
-            return;
-        }
-
-        if (targetUser.id !== loggedInUserId) {
-            res.status(401).json({ error: "Cannot view friend requests" });
             return;
         }
 
@@ -196,8 +197,13 @@ export const getFriendRequests: RequestHandler = async (req, res) => {
 
 export const sendFriendRequest: RequestHandler = async (req, res) => {
     try {
-        const { userId: recipientUserId } = req.params;
+        const { userId: recipientUserId } = req.body;
         const loggedInUserId = req.user?.id;
+
+        if (!loggedInUserId) {
+            res.status(401).json({ error: "Unauthorized: No user found in request" });
+            return;
+        }
 
         if (recipientUserId === loggedInUserId) {
             res.status(400).json({ error: "Cannot send friend request to yourself" });
@@ -217,8 +223,6 @@ export const sendFriendRequest: RequestHandler = async (req, res) => {
                 }           
             },
         });
-
-        console.log("recipientUserId", recipientUserId);
 
         const recipientUser = await prisma.user.findUnique({
             where: { id: recipientUserId },
@@ -252,8 +256,8 @@ export const sendFriendRequest: RequestHandler = async (req, res) => {
 
         const newFriendRequest = await prisma.friendRequest.create({
             data: {
-                sender_id: requestingUser.id,
-                receiver_id: recipientUserId,
+                sender: { connect: { id: requestingUser.id } },
+                receiver: { connect: { id: recipientUserId } },
                 status: "pending"
             },
             include: {
@@ -283,29 +287,33 @@ export const sendFriendRequest: RequestHandler = async (req, res) => {
 
 export const acceptFriendRequest: RequestHandler = async (req, res) => {
     try {
-        const { userId: acceptingUserId, requestId } = req.params;
+        const { requestId } = req.params;
         const loggedInUserId = req.user?.id;
 
-        if (!loggedInUserId || !acceptingUserId || !requestId) {
-            res.status(400).json({ error: "Missing required parameters" });
+        if (!loggedInUserId) {
+            res.status(401).json({ error: "Unauthorized: No user found in request" });
             return;
         }
 
-        if (acceptingUserId !== loggedInUserId) {
-            res.status(401).json({ error: "Cannot accept friend requests for other users" });
+        if (!requestId) {
+            res.status(400).json({ error: "Missing required parameters" });
             return;
         }
 
         const friendRequest = await prisma.friendRequest.findUnique({
             where: { 
                 id: requestId,
-                receiver_id: loggedInUserId,
                 status: "pending"
-            }
+            },
         });
 
         if (!friendRequest) {
             res.status(404).json({ error: "Friend request not found or already processed" });
+            return;
+        }
+
+        if (friendRequest.receiver_id !== loggedInUserId) {
+            res.status(401).json({ error: "Cannot accept friend requests for other users" });
             return;
         }
 
@@ -316,8 +324,8 @@ export const acceptFriendRequest: RequestHandler = async (req, res) => {
 
             const newFriendship = await prisma.friendship.create({
                 data: {
-                    user_id: friendRequest.sender_id,
-                    friend_id: loggedInUserId
+                    user: { connect: { id: friendRequest.sender_id } },
+                    friend: { connect: { id: loggedInUserId } },
                 },
             });
 
@@ -341,23 +349,23 @@ export const acceptFriendRequest: RequestHandler = async (req, res) => {
 
 export const rejectFriendRequest: RequestHandler = async (req, res) => {
     try {
-        const { userId: acceptingUserId, requestId } = req.params;
+        const { requestId } = req.params;
         const loggedInUserId = req.user?.id;
 
-        if (!loggedInUserId || !acceptingUserId || !requestId) {
+        if (!loggedInUserId) {
+            res.status(401).json({ error: "Unauthorized: No user found in request" });
+            return;
+        }
+
+        if (!requestId) {
             res.status(400).json({ error: "Missing required parameters" });
             return;
         }
 
-        if (acceptingUserId !== loggedInUserId) {
-            res.status(401).json({ error: "Cannot reject friend requests for other users" });
-            return;
-        }
 
         const friendRequest = await prisma.friendRequest.findUnique({
             where: { 
                 id: requestId,
-                receiver_id: loggedInUserId,
                 status: "pending"
             }
         });
@@ -367,20 +375,25 @@ export const rejectFriendRequest: RequestHandler = async (req, res) => {
             return;
         }
 
+        if (friendRequest.receiver_id !== loggedInUserId && friendRequest.sender_id !== loggedInUserId) {
+            res.status(401).json({ error: "Cannot reject or cancel friend requests for other users" });
+            return;
+        }
+
         await prisma.friendRequest.delete({
             where: { id: requestId },
         });
 
 
         res.status(200).json({
-            message: "Friend request rejected",
+            message: "Friend request successfully rejected or cancelled",
         });
         
     } catch (error) {
         if (error instanceof Error) {
-            console.log("Error in acceptFriendRequest controller", error.message);
+            console.log("Error in rejectFriendRequest controller", error.message);
         } else {
-            console.log("Unexpected error in acceptFriendRequest controller", error);
+            console.log("Unexpected error in rejectFriendRequest controller", error);
         }     
         res.status(500).json({ error: 'Internal server error' });
     }
@@ -391,7 +404,12 @@ export const removeFriend: RequestHandler = async (req, res) => {
         const { userId: friendToRemoveId } = req.params;
         const loggedInUserId = req.user?.id;
 
-        if (!loggedInUserId || !friendToRemoveId) {
+        if (!loggedInUserId) {
+            res.status(401).json({ error: "Unauthorized: No user found in request" });
+            return;
+        }
+
+        if (!friendToRemoveId) {
             res.status(400).json({ error: "Missing required parameters" });
             return;
         }
@@ -428,12 +446,10 @@ export const removeFriend: RequestHandler = async (req, res) => {
 
     } catch (error) {
         if (error instanceof Error) {
-            console.log("Error in acceptFriendRequest controller", error.message);
+            console.log("Error in removeFriend controller", error.message);
         } else {
-            console.log("Unexpected error in acceptFriendRequest controller", error);
+            console.log("Unexpected error in removeFriend controller", error);
         }     
         res.status(500).json({ error: 'Internal server error' });
     }
 }
-
-// delete all current friends and friend reqs in db tmr

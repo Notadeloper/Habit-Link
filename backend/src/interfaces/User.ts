@@ -5,3 +5,9 @@ export interface UpdateUserRequestBody {
     currentPassword: string;
     newPassword: string;
 }
+export interface UserUpdateData {
+    fullName?: string;
+    email?: string;
+    username?: string;
+    password?: string;
+}

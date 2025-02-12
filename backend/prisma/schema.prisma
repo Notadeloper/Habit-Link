@@ -35,6 +35,7 @@ model User {
   sentFriendRequests       FriendRequest[]           @relation("SentFriendRequests")
   receivedFriendRequests   FriendRequest[]           @relation("ReceivedFriendRequests")
   friendships              Friendship[]              @relation("UserFriendships") // Friendships initiated by the user
+  friendFriendships        Friendship[]              @relation("FriendFriendships") // Friendships where the user is the friend
   streaks                  Streak[]                  @relation("UserStreaks")
   groups                   Group[]                   @relation("groups")
   conversationParticipants ConversationParticipant[] // All conversation memberships for this user
@@ -42,26 +43,24 @@ model User {
 }
 
 model Group {
-  id          String       @id @default(uuid())
-  name        String
-  description String?
-  creator     User         @relation("groups", fields: [creator_id], references: [id])
-  creator_id  String
-  created_at  DateTime     @default(now())
-  updated_at  DateTime     @updatedAt
-  memberships Membership[]
-  habits      Habit[]
-  // Note: Group messages can be handled by creating a Conversation with isGroup = true.
-  // You might optionally store a reference to that conversation here if you want a direct link.
-  // conversationId String?
-  // conversation   Conversation? @relation(fields: [conversationId], references: [id])
+  id             String        @id @default(uuid())
+  name           String
+  description    String?
+  creator        User          @relation("groups", fields: [creator_id], references: [id])
+  creator_id     String
+  created_at     DateTime      @default(now())
+  updated_at     DateTime      @updatedAt
+  memberships    Membership[]
+  habits         Habit[]
+  conversationId String?       @unique // Added @unique here
+  conversation   Conversation? @relation("GroupConversation", fields: [conversationId], references: [id], onDelete: Cascade)
 }
 
 model Membership {
   id        String   @id @default(uuid())
   user      User     @relation(fields: [user_id], references: [id])
   user_id   String
-  group     Group    @relation(fields: [group_id], references: [id])
+  group     Group    @relation(fields: [group_id], references: [id], onDelete: Cascade)
   group_id  String
   role      Role     @default(USER)
   joined_at DateTime @default(now())
@@ -157,15 +156,15 @@ model Streak {
   @@index([user_id])
 }
 
-
 model Conversation {
   id           String                    @id @default(uuid())
   isGroup      Boolean                   @default(false) // false for DMs, true for group chats
-  name         String? // Optional name for group conversations
+  name         String?                   // Optional name for group conversations
   created_at   DateTime                  @default(now())
   updated_at   DateTime                  @updatedAt
   messages     Message[]
   participants ConversationParticipant[]
+  group        Group?                    @relation("GroupConversation")
 }
 
 model ConversationParticipant {

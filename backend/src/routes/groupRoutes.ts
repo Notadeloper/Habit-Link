@@ -1,29 +1,38 @@
 import express from "express";
-import { getFriendRequests, getUserProfile, updateUserProfile, viewFriends, sendFriendRequest, acceptFriendRequest, removeFriend, rejectFriendRequest } from "../controllers/userController";
+import { addUserToGroup, createGroup, getGroupInfoById, getGroupsForUser, updateGroup, deleteGroup, removeMemberFromGroup, addHabitToGroup, leaveGroup, assignAdmin } from "../controllers/groupController";
 import { protectRoute } from "../middleware/protectRoute";
 
 const router = express.Router();
 
-
 // Create group - also take initial parameters for initial group members
-// Get list of all groups a user belons to
-// Invite member to group
-// Remove member from group
-// Add habit to group
-// Update group details
-// Get list of group members
-// leave a group
+router.post("/", protectRoute, createGroup);
 
-router.get("/profile/:username", protectRoute, getUserProfile);
-// update profile
-router.put("/profile", protectRoute, updateUserProfile);
-router.get("/friends/:username", protectRoute, viewFriends);
+// Get list of all groups current user belongs to
+router.get("/", protectRoute, getGroupsForUser);
 
-router.get("/friend-requests/:userId", protectRoute, getFriendRequests);
-router.post("/friend-requests/:userId/send", protectRoute, sendFriendRequest);
-router.put("/friend-requests/:userId/cancel/:requestId", protectRoute, acceptFriendRequest);
-router.put("/friend-requests/:userId/accept/:requestId", protectRoute, acceptFriendRequest);
-router.delete("/friend-requests/:userId/reject/:requestId", protectRoute, rejectFriendRequest);
-router.delete("/friends/remove/:userId", protectRoute, removeFriend);
+// Get detailed information for a specific group
+router.get("/:groupId", protectRoute, getGroupInfoById);
+
+// Update group details (only if admin)
+router.put("/:groupId", protectRoute, updateGroup);
+
+// Delete a group (only if admin)
+router.delete("/:groupId", protectRoute, deleteGroup);
+
+// Add member to group
+router.post("/:groupId/members", protectRoute, addUserToGroup);
+
+// Remove user from group (only if admin)
+router.delete("/:groupId/members/:memberId", protectRoute, removeMemberFromGroup);
+
+// Add a habit to a group
+router.post("/:groupId/habits", protectRoute, addHabitToGroup);
+
+// Leave a group (for the current user)
+router.post("/:groupId/leave", protectRoute, leaveGroup);
+
+// Give someone in the group admin rights (only if admin)
+router.put("/:groupId/members/:memberId/admin", protectRoute, assignAdmin);
+
 
 export default router;

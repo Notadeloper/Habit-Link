@@ -8,12 +8,15 @@ To run DB in dev -> docker compose up -d db
  docker exec -it prisma_postgres psql -U postgres -d habitlinkdb 
  lets you view the sql database
  
+or use
+npx prisma studio
+
 
 
 
  When updating database:
  run 
- npx prisma migrate dev --name "your_migration_name"
+ npx prisma migrate dev --name "adding cascading deletes for group corrected"
 
- then
- docker-compose exec app npx prisma migrate deploy
+ then change db host to db and 
+docker-compose run app npx prisma migrate deploy

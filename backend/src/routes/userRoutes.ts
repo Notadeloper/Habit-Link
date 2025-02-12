@@ -4,15 +4,15 @@ import { protectRoute } from "../middleware/protectRoute";
 
 const router = express.Router();
 
-router.get("/profile/:username", protectRoute, getUserProfile);
+router.get("/profile/:userId", protectRoute, getUserProfile);
 // update profile
 router.put("/profile", protectRoute, updateUserProfile);
-router.get("/friends/:username", protectRoute, viewFriends);
+router.get("/friends/:userId", protectRoute, viewFriends);
 
-router.get("/friend-requests/:userId", protectRoute, getFriendRequests);
-router.post("/friend-requests/:userId/send", protectRoute, sendFriendRequest);
-router.put("/friend-requests/:userId/accept/:requestId", protectRoute, acceptFriendRequest);
-router.delete("/friend-requests/:userId/reject/:requestId", protectRoute, rejectFriendRequest);
-router.delete("/friends/remove/:userId", protectRoute, removeFriend);
+router.get("/friend-requests", protectRoute, getFriendRequests);
+router.post("/friend-requests", protectRoute, sendFriendRequest);
+router.put("/friend-requests/:requestId/accept", protectRoute, acceptFriendRequest);
+router.delete("/friend-requests/:requestId", protectRoute, rejectFriendRequest);
+router.delete("/friends/:userId", protectRoute, removeFriend);
 
 export default router;
