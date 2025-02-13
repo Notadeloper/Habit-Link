@@ -1,5 +1,5 @@
 import express from "express";
-import { addUserToGroup, createGroup, getGroupInfoById, getGroupsForUser, updateGroup, deleteGroup, removeMemberFromGroup, addHabitToGroup, leaveGroup, assignAdmin } from "../controllers/groupController";
+import { addUserToGroup, createGroup, getGroupInfoById, getGroupsForUser, updateGroup, deleteGroup, removeMemberFromGroup, leaveGroup, assignAdmin } from "../controllers/groupController";
 import { protectRoute } from "../middleware/protectRoute";
 
 const router = express.Router();
@@ -24,9 +24,6 @@ router.post("/:groupId/members", protectRoute, addUserToGroup);
 
 // Remove user from group (only if admin)
 router.delete("/:groupId/members/:memberId", protectRoute, removeMemberFromGroup);
-
-// Add a habit to a group
-router.post("/:groupId/habits", protectRoute, addHabitToGroup);
 
 // Leave a group (for the current user)
 router.post("/:groupId/leave", protectRoute, leaveGroup);

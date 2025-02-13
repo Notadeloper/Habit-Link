@@ -7,6 +7,19 @@
 /* Habit Tracking Routes
 These endpoints log progress or activity on a habit.
 
+POST habits -> create new habit
+
+GET /api/habits
+Retrieve a list of habits for the logged-in user.
+
+GET /api/habits/:habitId
+Retrieve details for a specific habit.
+
+PUT /api/habits/:habitId
+Update habit details.
+DELETE /api/habits/:habitId
+Delete a habit.
+
 POST /api/habit-tracking
 Create a new tracking entry for a habit (e.g., mark the habit as completed for a day).
 

@@ -329,6 +329,13 @@ export const removeMemberFromGroup: RequestHandler = async (req, res) => {
             return;
         }
 
+        const targetMembership = group.memberships.find((membership) => membership.user_id === memberId);
+
+        if (!targetMembership) {
+            res.status(404).json({ error: "Membership not found: User is not a member of this group" });
+            return;
+        }
+
         await prisma.membership.delete({
             where: {
               user_id_group_id: { user_id: memberId, group_id: groupId },
@@ -347,23 +354,57 @@ export const removeMemberFromGroup: RequestHandler = async (req, res) => {
     }
 }
 
-export const addHabitToGroup: RequestHandler = async (req, res) => {
-    try {
-
-    } catch (error) {
-        if (error instanceof Error) {
-            console.log("Error in addHabitToGroup controller", error.message);
-        } else {
-            console.log("Unexpected error in addHabitToGroup controller", error);
-        }     
-        res.status(500).json({ error: 'Internal server error' });
-    }
-}
-
-
 export const leaveGroup: RequestHandler = async (req, res) => {
     try {
+        const userId = req.user?.id;
+        const { groupId } = req.params;
 
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized: No user found in request" });
+            return;
+        }
+
+        if (!groupId) {
+            res.status(400).json({ error: "Bad Request: Group ID is required" });
+            return;
+        }
+
+        const group = await prisma.group.findUnique({
+            where: { id: groupId },
+            include: { memberships: true },
+        });
+
+        if (!group) {
+            res.status(404).json({ error: "Group not found" });
+            return;
+        }
+
+        const membership = group.memberships.find((membership) => membership.user_id === userId);
+
+        if (!membership) {
+            res.status(400).json({ error: "Bad Request: User is not a member of this group" });
+            return;
+        }
+
+        // If the user is an admin, ensure they are not the only admin.
+        if (membership.role === "ADMIN") {
+            const adminCount = group.memberships.filter(m => m.role === "ADMIN").length;
+            if (adminCount < 2) {
+                res.status(400).json({ error: "Cannot leave group as you are the only admin" });
+                return;
+            }
+        }
+
+        await prisma.membership.delete({
+            where: {
+                user_id_group_id: {
+                    user_id: userId,
+                    group_id: groupId,
+                },
+            },
+        });
+
+        res.status(200).json({ message: "Left group successfully" });
     } catch (error) {
         if (error instanceof Error) {
             console.log("Error in leaveGroup controller", error.message);
@@ -376,7 +417,60 @@ export const leaveGroup: RequestHandler = async (req, res) => {
 
 export const assignAdmin: RequestHandler = async (req, res) => {
     try {
+        const userId = req.user?.id;
+        const { groupId, memberId } = req.params;
 
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized: No user found in request" });
+            return;
+        }
+
+        if (!groupId) {
+            res.status(400).json({ error: "Bad Request: Group ID is required" });
+            return;
+        }
+
+        const group = await prisma.group.findUnique({
+            where: { id: groupId },
+            include: { memberships: true },
+        });
+
+        if (!group) {
+            res.status(404).json({ error: "Group not found" });
+            return;
+        }
+
+        const userMembership = group.memberships.find((membership) => membership.user_id === userId);
+        const memberMembership = group.memberships.find((membership) => membership.user_id === memberId);
+
+        if (!userMembership || userMembership.role !== "ADMIN") {
+            res.status(400).json({ error: "Bad Request: You do not have permission to grant someone ADMIN in this group" });
+            return;
+        }
+
+        if (!memberMembership || memberMembership.role === "ADMIN") {
+            res.status(400).json({ error: "Bad Request: User is already an admin or not a member of this group" });
+            return;
+        }
+
+        await prisma.group.update({
+            where: { id: groupId },
+            data: {
+                memberships: {
+                    update: {
+                        where: {
+                            user_id_group_id: {
+                            user_id: memberId,
+                            group_id: groupId,
+                            },
+                        },
+                        data: { role: "ADMIN" },
+                    },
+                },
+            },
+        })
+
+        res.status(200).json({ message: "Assigned admin successfully" });
     } catch (error) {
         if (error instanceof Error) {
             console.log("Error in assignAdmin controller", error.message);
