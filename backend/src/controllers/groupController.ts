@@ -102,7 +102,7 @@ export const getGroupInfoById: RequestHandler = async (req, res) => {
         const { groupId } = req.params;
 
         if (!userId) {
-            res.status(401).json({ error: "Unauthorized: No user found in request" });
+            res.status(401).json({ error: "Unauthorized: No user found in request" }); 
             return;
         }
 
@@ -110,8 +110,13 @@ export const getGroupInfoById: RequestHandler = async (req, res) => {
             where: { id: groupId },
             include: {
                 memberships: true,
-                habits: true,
-                conversation: true
+                conversation: true,
+                habitGroups: {
+                    include: { 
+                    habit: true  // This includes all fields of the habit associated with each HabitGroup record.
+                    }
+                },
+                GroupHabitProposal: true,
             },
         });
 

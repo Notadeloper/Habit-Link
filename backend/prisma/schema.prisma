@@ -40,20 +40,23 @@ model User {
   groups                   Group[]                   @relation("groups")
   conversationParticipants ConversationParticipant[] // All conversation memberships for this user
   Message                  Message[]
+  GroupHabitProposal       GroupHabitProposal[]
+  GroupHabitAgreement      GroupHabitAgreement[]
 }
 
 model Group {
-  id             String        @id @default(uuid())
-  name           String
-  description    String?
-  creator        User          @relation("groups", fields: [creator_id], references: [id])
-  creator_id     String
-  created_at     DateTime      @default(now())
-  updated_at     DateTime      @updatedAt
-  memberships    Membership[]
-  habits         Habit[]
-  conversationId String?       @unique // Added @unique here
-  conversation   Conversation? @relation("GroupConversation", fields: [conversationId], references: [id], onDelete: Cascade)
+  id                 String               @id @default(uuid())
+  name               String
+  description        String?
+  creator            User                 @relation("groups", fields: [creator_id], references: [id])
+  creator_id         String
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
+  memberships        Membership[]
+  conversationId     String?              @unique // Added @unique here
+  conversation       Conversation?        @relation("GroupConversation", fields: [conversationId], references: [id], onDelete: Cascade)
+  habitGroups        HabitGroup[]
+  GroupHabitProposal GroupHabitProposal[]
 }
 
 model Membership {
@@ -102,28 +105,23 @@ model Habit {
   id               String          @id @default(uuid())
   user             User            @relation(fields: [user_id], references: [id])
   user_id          String
-  group            Group?          @relation(fields: [group_id], references: [id])
-  group_id         String?
   title            String
   description      String?
   frequency_count  Int
   frequency_period FrequencyPeriod
-  custom_period    Int?
-  goal             Int?
-  start_date       DateTime?
-  end_date         DateTime?
+  goalStreak       Int?
   created_at       DateTime        @default(now())
   updated_at       DateTime        @updatedAt
   habitTrackings   HabitTracking[]
   streaks          Streak[]        @relation("HabitStreaks")
+  habitGroups      HabitGroup[]
 
   @@index([user_id])
-  @@index([group_id])
 }
 
 model HabitTracking {
   id         String   @id @default(uuid())
-  habit      Habit    @relation(fields: [habit_id], references: [id])
+  habit      Habit    @relation(fields: [habit_id], references: [id], onDelete: Cascade)
   habit_id   String
   user       User     @relation(fields: [user_id], references: [id])
   user_id    String
@@ -137,6 +135,41 @@ model HabitTracking {
   @@index([habit_id])
   @@index([user_id])
   @@index([date])
+}
+
+model HabitGroup {
+  habit    Habit    @relation(fields: [habitId], references: [id])
+  habitId  String
+  group    Group    @relation(fields: [groupId], references: [id])
+  groupId  String
+  added_at DateTime @default(now())
+
+  @@unique([habitId, groupId])
+}
+
+model GroupHabitProposal {
+  id               String                @id @default(uuid())
+  group            Group                 @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId          String
+  title            String
+  description      String?
+  frequency_period FrequencyPeriod
+  proposer         User                  @relation(fields: [proposerId], references: [id])
+  proposerId       String
+  created_at       DateTime              @default(now())
+  agreements       GroupHabitAgreement[]
+}
+
+model GroupHabitAgreement {
+  id         String             @id @default(uuid())
+  proposal   GroupHabitProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  proposalId String
+  user       User               @relation(fields: [userId], references: [id])
+  userId     String
+  decision   Boolean // true = agree, false = disagree
+  created_at DateTime           @default(now())
+
+  @@unique([proposalId, userId])
 }
 
 model Streak {
@@ -159,7 +192,7 @@ model Streak {
 model Conversation {
   id           String                    @id @default(uuid())
   isGroup      Boolean                   @default(false) // false for DMs, true for group chats
-  name         String?                   // Optional name for group conversations
+  name         String? // Optional name for group conversations
   created_at   DateTime                  @default(now())
   updated_at   DateTime                  @updatedAt
   messages     Message[]

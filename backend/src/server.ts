@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import authRoutes from "./routes/authRoutes";
 import userRoutes from "./routes/userRoutes";
 import groupRoutes from "./routes/groupRoutes";
+import habitRoutes from "./routes/habitRoutes";
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.get("/", (req: Request, res: Response) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/group", groupRoutes);
+app.use("/api/habit", habitRoutes);
 
 app.listen(5000, () => {
     console.log("Server is running on port 5000");
