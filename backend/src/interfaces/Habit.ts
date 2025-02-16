@@ -4,7 +4,20 @@ export interface CreateHabitRequestBody {
   title: string;
   description?: string;
   frequency_count: number;
-  frequency_period: FrequencyPeriod; // e.g., "day", "week", etc.
+  frequency_period: FrequencyPeriod;
   goalStreak?: number;
-  groupId?: string;    // Optional: if provided, link this habit to a group.
+  groupId?: string; 
+}
+export interface CreateHabitTrackingRequestBody {
+    habitId: string; 
+    date: string
+    notes?: string;
+}
+
+export interface UpdateHabitRequestBody {
+    title?: string;
+    description?: string;
+    frequency_count?: number;
+    frequency_period?: FrequencyPeriod;
+    goalStreak?: number;
 }

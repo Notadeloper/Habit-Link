@@ -16,7 +16,7 @@ npx prisma studio
 
  When updating database:
  run 
- npx prisma migrate dev --name "adding specific habit details"
+ npx prisma migrate dev --name "modifying custom periods"
 
  then change db host to db and 
 docker-compose run app npx prisma migrate deploy

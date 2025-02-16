@@ -1,5 +1,5 @@
 import express from "express";
-import { createHabit, getHabitsForUser, getHabitDetails, deleteHabit } from "../controllers/habitController";
+import { createHabit, getHabitsForUser, getHabitDetails, deleteHabit, createHabitTracking, updateHabit } from "../controllers/habitController";
 import { protectRoute } from "../middleware/protectRoute";
 
 const router = express.Router();
@@ -15,13 +15,13 @@ router.get("/", protectRoute, getHabitsForUser);
 router.get("/:habitId", protectRoute, getHabitDetails);
 
 // Update habit details (if freq period changes, recalculate streak)
-router.put("/:habitId", protectRoute, createHabit);
+router.put("/:habitId", protectRoute, updateHabit);
 
 // Delete Habit
 router.delete("/:habitId", protectRoute, deleteHabit);
 
 // Create a new tracking entry for a habit (e.g., mark the habit as completed for a day) 
-router.post("/tracking", protectRoute, createHabit);
+router.post("/tracking", protectRoute, createHabitTracking);
 
 // Update a habit tracking entry
 router.get("/tracking/:trackingId", protectRoute, createHabit);

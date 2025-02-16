@@ -18,7 +18,6 @@ enum FrequencyPeriod {
   day
   week
   month
-  custom
 }
 
 model User {
@@ -27,6 +26,7 @@ model User {
   email                    String                    @unique
   password                 String
   fullName                 String
+  dayStart                 String                    @default("00:00")
   created_at               DateTime                  @default(now())
   updated_at               DateTime                  @updatedAt
   habits                   Habit[]
@@ -126,7 +126,6 @@ model HabitTracking {
   user       User     @relation(fields: [user_id], references: [id])
   user_id    String
   date       DateTime
-  status     String   @default("completed")
   notes      String?
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
