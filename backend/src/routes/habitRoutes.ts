@@ -1,5 +1,5 @@
 import express from "express";
-import { createHabit, getHabitsForUser, getHabitDetails, deleteHabit, createHabitTracking, updateHabit } from "../controllers/habitController";
+import { createHabit, getHabitsForUser, getHabitDetails, deleteHabit, createHabitTracking, updateHabit, updateHabitTracking, deleteHabitTracking } from "../controllers/habitController";
 import { protectRoute } from "../middleware/protectRoute";
 
 const router = express.Router();
@@ -24,10 +24,10 @@ router.delete("/:habitId", protectRoute, deleteHabit);
 router.post("/tracking", protectRoute, createHabitTracking);
 
 // Update a habit tracking entry
-router.get("/tracking/:trackingId", protectRoute, createHabit);
+router.put("/tracking/:trackingId", protectRoute, updateHabitTracking);
 
 // Delete a habit tracking entry
-router.delete("/tracking/:trackingId", protectRoute, createHabit);
+router.delete("/tracking/:trackingId", protectRoute, deleteHabitTracking);
 
 
 /* Habit Tracking Routes

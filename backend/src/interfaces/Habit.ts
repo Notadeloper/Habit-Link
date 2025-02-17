@@ -21,3 +21,8 @@ export interface UpdateHabitRequestBody {
     frequency_period?: FrequencyPeriod;
     goalStreak?: number;
 }
+
+export interface UpdateHabitTrackingRequestBody {
+    date?: string;
+    notes?: string; 
+}

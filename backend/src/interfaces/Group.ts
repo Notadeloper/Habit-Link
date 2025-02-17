@@ -7,4 +7,4 @@ export interface CreateGroupRequestBody {
 export interface GroupUpdateData {
     name?: string;
     description?: string;
-  }
+}

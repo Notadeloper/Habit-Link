@@ -27,6 +27,7 @@ model User {
   password                 String
   fullName                 String
   dayStart                 String                    @default("00:00")
+  onboardingCompleted      Boolean                   @default(false)
   created_at               DateTime                  @default(now())
   updated_at               DateTime                  @updatedAt
   habits                   Habit[]
@@ -43,6 +44,12 @@ model User {
   GroupHabitProposal       GroupHabitProposal[]
   GroupHabitAgreement      GroupHabitAgreement[]
 }
+
+// NEXT IS TO MAKE SURE DAYSTART AND ONBOARDING COMPLETED IN THE FORM OF API CALLS
+// FIX THE STREAK CALCULATION USING PROPER DAY STARTS AND TEST
+// FINISH HABIT ROUTES
+// FIGURE OUT GROUP HABITS
+// DO CONVERSATIONS
 
 model Group {
   id                 String               @id @default(uuid())

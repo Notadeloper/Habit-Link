@@ -4,10 +4,13 @@ export interface UpdateUserRequestBody {
     fullName: string;
     currentPassword: string;
     newPassword: string;
+    dayStart: string;
 }
 export interface UserUpdateData {
     fullName?: string;
     email?: string;
     username?: string;
     password?: string;
+    dayStart?: string;
+    onboardingCompleted?: boolean;
 }

@@ -3,6 +3,7 @@ import { RequestHandler } from "express";
 import prisma from "../prismaClient";
 import bcrypt from "bcryptjs";
 import { UpdateUserRequestBody, UserUpdateData } from "../interfaces/User";
+import { recalculateStreaks } from "./habitController";
 
 export const getUserProfile: RequestHandler = async (req, res) => {
     try {
@@ -18,6 +19,7 @@ export const getUserProfile: RequestHandler = async (req, res) => {
                 email: true,
                 friendships: true,
                 friendFriendships: true,
+                dayStart: true,
             },
         });
 
@@ -65,7 +67,7 @@ export const getUserProfile: RequestHandler = async (req, res) => {
 
 export const updateUserProfile: RequestHandler = async (req, res) => {
     try {
-        const { fullName, email, username, currentPassword, newPassword  }: UpdateUserRequestBody = req.body;
+        const { fullName, email, username, currentPassword, newPassword, dayStart }: UpdateUserRequestBody = req.body;
     
         const user = await prisma.user.findUnique({ where: { id: req.user?.id } });
 
@@ -84,6 +86,10 @@ export const updateUserProfile: RequestHandler = async (req, res) => {
         if (fullName) updateData.fullName = fullName;
         if (email) updateData.email = email;
         if (username) updateData.username = username;
+        if (dayStart) {
+            updateData.dayStart = dayStart;
+            updateData.onboardingCompleted = true;
+        }
 
         if (currentPassword && newPassword) {
             const isMatch = await bcrypt.compare(currentPassword, user.password)
@@ -106,6 +112,16 @@ export const updateUserProfile: RequestHandler = async (req, res) => {
                 // Don't include password in the response
             }
         });
+
+        if (dayStart) {
+            const userHabits = await prisma.habit.findMany({
+                where: { user_id: user.id },
+            });
+
+            for (const habit of userHabits) {
+                recalculateStreaks(habit.id, user.id, habit.frequency_count, habit.frequency_period, dayStart);
+            }
+        }
 
         res.status(200).json(updatedUser);
     } catch (error) {

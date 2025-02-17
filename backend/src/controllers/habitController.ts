@@ -1,8 +1,7 @@
 import { RequestHandler } from "express";
 import prisma from "../prismaClient";
-import { CreateHabitRequestBody, CreateHabitTrackingRequestBody, UpdateHabitRequestBody } from "../interfaces/Habit";
-import { format, startOfWeek, differenceInCalendarDays, differenceInCalendarWeeks, differenceInCalendarMonths } from 'date-fns';
-import { connect } from "http2";
+import { CreateHabitRequestBody, CreateHabitTrackingRequestBody, UpdateHabitRequestBody, UpdateHabitTrackingRequestBody } from "../interfaces/Habit";
+import { format, startOfWeek, differenceInCalendarDays, differenceInCalendarWeeks, differenceInCalendarMonths, addDays } from 'date-fns';
 
 export const createHabit: RequestHandler = async (req, res) => {
     try {
@@ -146,6 +145,15 @@ export const updateHabit: RequestHandler = async (req, res) => {
             return;
         }
 
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            res.status(404).json({ error: 'No user found' });
+            return;
+        }
+
         const habit = await prisma.habit.findUnique({
             where: { id: habitId, user_id: userId },
           });
@@ -172,7 +180,7 @@ export const updateHabit: RequestHandler = async (req, res) => {
             return;
         }
 
-        recalculateStreaks(habitId, userId, updatedHabit.frequency_count, updatedHabit.frequency_period);
+        recalculateStreaks(habitId, userId, updatedHabit.frequency_count, updatedHabit.frequency_period, user.dayStart);
     
         res.status(200).json({ updatedHabit });
     } catch (error) {
@@ -232,8 +240,14 @@ export const createHabitTracking: RequestHandler = async (req, res) => {
     try {
         const userId = req.user?.id;
 
-        if (!userId) {
-            res.status(401).json({ error: "Unauthorized: No user found in request" });
+        const user = await prisma.user.findUnique({
+            where: {
+                id: userId,
+            },
+        });
+
+        if (!user) {
+            res.status(404).json({ error: 'No user found' });
             return;
         }
 
@@ -271,7 +285,7 @@ export const createHabitTracking: RequestHandler = async (req, res) => {
             },
         });
 
-        recalculateStreaks(habitId, userId, habit.frequency_count, habit.frequency_period);
+        recalculateStreaks(habitId, user.id, habit.frequency_count, habit.frequency_period, user.dayStart);
 
         res.status(201).json({ habitTracking: newTracking });
     } catch (error) {
@@ -284,7 +298,103 @@ export const createHabitTracking: RequestHandler = async (req, res) => {
     }
 }
 
-const recalculateStreaks = async (habitId: string, userId: string, frequency_count: number, frequency_period: "day" | "week" | "month") => {
+
+export const updateHabitTracking: RequestHandler = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        const { trackingId } = req.params;
+        const { date, notes } = req.body as UpdateHabitTrackingRequestBody;
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            res.status(404).json({ error: 'No user found' });
+            return;
+        }
+
+        const trackingEntry = await prisma.habitTracking.findUnique({
+            where: { id: trackingId },
+            include: { habit: true },
+        });
+      
+
+        if (!trackingEntry || trackingEntry.user_id !== userId) {
+           res.status(404).json({ error: "Tracking entry not found" });
+           return;
+        }
+
+        const updatedTracking = await prisma.habitTracking.update({
+            where: { id: trackingId },
+            data: {
+                date: date ? new Date(date) : trackingEntry.date,
+                notes: notes !== undefined ? notes : trackingEntry.notes,
+            },
+        });
+
+        const habit = trackingEntry.habit;
+
+        recalculateStreaks(habit.id, userId, habit.frequency_count, habit.frequency_period, user.dayStart);
+    
+        res.status(200).json({ updatedTracking });
+    } catch (error) {
+        if (error instanceof Error) {
+            console.log("Error in getHabitDetails controller", error.message);
+        } else {
+            console.log("Unexpected error in getHabitDetails controller", error);
+        }     
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
+
+export const deleteHabitTracking: RequestHandler = async (req, res) => {
+    try {
+        const userId = req.user?.id;
+        const { trackingId } = req.params;
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            res.status(404).json({ error: 'No user found' });
+            return;
+        }
+
+        const trackingEntry = await prisma.habitTracking.findUnique({
+            where: { id: trackingId },
+            include: { habit: true },
+        });
+      
+        if (!trackingEntry || trackingEntry.user_id !== userId) {
+           res.status(404).json({ error: "Tracking entry not found" });
+           return;
+        }
+
+        const habit = trackingEntry.habit;
+
+        await prisma.habitTracking.delete({
+            where: { id: trackingId }
+        })
+
+        recalculateStreaks(habit.id, userId, habit.frequency_count, habit.frequency_period, user.dayStart);
+    
+        res.status(200).json({ message: "Habit tracking deleted successfully" });
+    } catch (error) {
+        if (error instanceof Error) {
+            console.log("Error in getHabitDetails controller", error.message);
+        } else {
+            console.log("Unexpected error in getHabitDetails controller", error);
+        }     
+        res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
+
+// All done in UTC
+export const recalculateStreaks = async (habitId: string, userId: string, frequency_count: number, frequency_period: "day" | "week" | "month", dayStart: string) => {
     try {
         const trackingEntries = await prisma.habitTracking.findMany({
             where: {
@@ -301,7 +411,8 @@ const recalculateStreaks = async (habitId: string, userId: string, frequency_cou
         const periodCounts: Map<string, { count: number; date: Date }> = new Map();
         for (const entry of trackingEntries) {
             const entryDate = new Date(entry.date);
-            const key = getPeriodKey(entryDate, frequency_period as "day" | "week" | "month");
+            const key = getPeriodKey(entryDate, frequency_period as "day" | "week" | "month", dayStart);
+            console.log(key, entryDate);
             if (periodCounts.has(key)) {
                 periodCounts.get(key)!.count++;
             } else {
@@ -319,7 +430,7 @@ const recalculateStreaks = async (habitId: string, userId: string, frequency_cou
 
         console.log("qualifyingPeriods", qualifyingPeriods)
 
-        const currentPeriodKey = getPeriodKey(new Date(), frequency_period);
+        const currentPeriodKey = getPeriodKey(new Date(), frequency_period, dayStart);
         let currentStreak = 0;
         if (qualifyingPeriods.length > 0 && qualifyingPeriods[0].key === currentPeriodKey) {
             currentStreak = 1;
@@ -378,15 +489,34 @@ const recalculateStreaks = async (habitId: string, userId: string, frequency_cou
     }
 }
 
-function getPeriodKey(date: Date, frequency_period: "day" | "week" | "month"): string {
+function adjustToUserDay(date: Date, dayStart: string): Date {
+    const [hour, minute] = dayStart.split(":").map(Number);
+    const adjusted = new Date(date);
+    // Set the date's time to the user's day start.
+    adjusted.setUTCHours(hour, minute, 0, 0);
+    // If the original date is before the adjusted time, it belongs to the previous day.
+    console.log(date.getTime(), adjusted.getTime());
+    if (date.getTime() <= adjusted.getTime()) {
+        return addDays(adjusted, -1);
+    }
+    return adjusted;
+}
+
+
+function getPeriodKey(date: Date, frequency_period: "day" | "week" | "month", dayStart: string): string {
     try {
         if (frequency_period === "day") {
-        return format(date, "yyyy-MM-dd");
+            const adjustedDate = adjustToUserDay(date, dayStart);
+            return format(adjustedDate, "yyyy-MM-dd");
         } else if (frequency_period === "week") {
-        const monday = startOfWeek(date, { weekStartsOn: 1 });
-        return format(monday, "yyyy-MM-dd");
+            // Adjust the date first
+            const adjustedDate = adjustToUserDay(date, dayStart);
+            // Get Monday as the start of the week (weekStartsOn: 1)
+            const monday = startOfWeek(adjustedDate, { weekStartsOn: 1 });
+            return format(monday, "yyyy-MM-dd");
         } else if (frequency_period === "month") {
-        return format(date, "yyyy-MM");
+            const adjustedDate = adjustToUserDay(date, dayStart);
+            return format(adjustedDate, "yyyy-MM");
         }
         return "";
     } catch (error) {
