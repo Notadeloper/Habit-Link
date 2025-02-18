@@ -185,7 +185,6 @@ model Conversation {
   groupId      String?                   @unique
   group        Group?                    @relation("GroupConversation", fields: [groupId], references: [id], onDelete: Cascade)
   isGroup      Boolean                   @default(false) // false for DMs, true for group chats
-  name         String? // Optional: e.g., a group name or conversation title
   created_at   DateTime                  @default(now())
   updated_at   DateTime                  @updatedAt
   messages     Message[]

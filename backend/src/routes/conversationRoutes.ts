@@ -1,7 +1,32 @@
 import express from "express";
 import { protectRoute } from "../middleware/protectRoute";
+import { getConversationsDM } from "../controllers/conversationController";
 
 const router = express.Router();
+
+router.get("/dm", protectRoute, getConversationsDM);
+
+router.get("/:conversationId", protectRoute, getConversationsDM);
+
+router.post("/:userId", protectRoute, getConversationsDM);
+
+router.post("/:conversationId", protectRoute, getConversationsDM);
+
+
+
+// Get the most recent conversations for group - determined by updatedBy date
+
+// Get the most recent conversations for friend - determined by updatedByDate
+
+// GET - get the details of a conversation asociated with a converesation ID
+
+// CREATE a new conversation (between two people)
+
+// POST - send a message in a conversation
+
+
+
+export default router;
 
 /*GET /api/conversations
 List all conversations for the logged-in user (both DMs and group chats).

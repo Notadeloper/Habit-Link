@@ -28,6 +28,7 @@ export const createGroup: RequestHandler = async (req, res) => {
         }
 
         const additionalMemberIds = memberIds ? memberIds.filter((id: string) => id !== creatorId) : [];
+        const participantUserIds = [creatorId, ...additionalMemberIds];
 
         const newGroup = await prisma.group.create({
             data: {
@@ -54,7 +55,12 @@ export const createGroup: RequestHandler = async (req, res) => {
                   },
                 conversation: {
                     create: {
-                      isGroup: true,
+                        isGroup: true,
+                        participants: {
+                            create: participantUserIds.map((id) => ({
+                                user: { connect: { id } },
+                            })),
+                        },
                     },
                 },
             },
@@ -297,10 +303,12 @@ export const addUserToGroup: RequestHandler = async (req, res) => {
 
         const group = await prisma.group.findUnique({
             where: { id: groupId },
-            include: { memberships: true },
+            include: { 
+                memberships: true, conversation: true 
+            },
         });
 
-        if (!group) {
+        if (!group || !group.conversation) {
             res.status(404).json({ error: "Group not found" });
             return;
         }
@@ -319,13 +327,21 @@ export const addUserToGroup: RequestHandler = async (req, res) => {
             return;
         }
 
-        const newMembership = await prisma.membership.create({
-            data: {
-              group: { connect: { id: groupId } },
-              user: { connect: { id: memberId } },
-              role: "USER",
-            },
-          });
+        const [newMembership, newParticipant] = await prisma.$transaction([
+            prisma.membership.create({
+                data: {
+                    group: { connect: { id: groupId } },
+                    user: { connect: { id: memberId } },
+                    role: "USER",
+                },
+            }),
+            prisma.conversationParticipant.create({
+                data: {
+                    conversation: { connect: { id: group.conversation.id } },
+                    user: { connect: { id: memberId } },
+                },
+            }),
+        ]);
 
           res.status(201).json({ message: "Member added successfully", membership: newMembership });
     } catch (error) {
@@ -360,10 +376,13 @@ export const removeMemberFromGroup: RequestHandler = async (req, res) => {
 
         const group = await prisma.group.findUnique({
             where: { id: groupId },
-            include: { memberships: true },
+            include: { 
+                memberships: true, 
+                conversation: true 
+            },
         });
 
-        if (!group) {
+        if (!group || !group.conversation) {
             res.status(404).json({ error: "Group not found" });
             return;
         }
@@ -384,11 +403,21 @@ export const removeMemberFromGroup: RequestHandler = async (req, res) => {
             return;
         }
 
-        await prisma.membership.delete({
-            where: {
-              user_id_group_id: { user_id: memberId, group_id: groupId },
-            },
-        });
+        await prisma.$transaction([
+            prisma.membership.delete({
+                where: {
+                    user_id_group_id: { user_id: memberId, group_id: groupId },
+                },
+            }),
+            prisma.conversationParticipant.delete({
+                where: {
+                    conversationId_userId: {
+                        conversationId: group.conversation.id,
+                        userId: memberId,
+                    },
+                },
+            }),
+          ]);
 
         res.status(200).json({ message: "Member removed successfully" });
 
@@ -419,10 +448,13 @@ export const leaveGroup: RequestHandler = async (req, res) => {
 
         const group = await prisma.group.findUnique({
             where: { id: groupId },
-            include: { memberships: true },
+            include: { 
+                memberships: true,
+                conversation: true
+            },
         });
 
-        if (!group) {
+        if (!group || !group.conversation) {
             res.status(404).json({ error: "Group not found" });
             return;
         }
@@ -443,14 +475,20 @@ export const leaveGroup: RequestHandler = async (req, res) => {
             }
         }
 
-        await prisma.membership.delete({
-            where: {
-                user_id_group_id: {
-                    user_id: userId,
-                    group_id: groupId,
+        await prisma.$transaction([
+            prisma.membership.delete({
+                where: { user_id_group_id: { user_id: userId, group_id: groupId } },
+            }),
+            prisma.conversationParticipant.delete({
+                where: {
+                    conversationId_userId: {
+                        conversationId: group.conversation.id,
+                        userId: userId,
+                    },
                 },
-            },
-        });
+            }),
+          ]);
+      
 
         res.status(200).json({ message: "Left group successfully" });
     } catch (error) {
