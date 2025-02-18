@@ -41,8 +41,7 @@ model User {
   groups                   Group[]                   @relation("groups")
   conversationParticipants ConversationParticipant[] // All conversation memberships for this user
   Message                  Message[]
-  GroupHabitProposal       GroupHabitProposal[]
-  GroupHabitAgreement      GroupHabitAgreement[]
+  HabitParticipation       HabitParticipation[]
 }
 
 // NEXT IS TO MAKE SURE DAYSTART AND ONBOARDING COMPLETED IN THE FORM OF API CALLS
@@ -52,23 +51,22 @@ model User {
 // DO CONVERSATIONS
 
 model Group {
-  id                 String               @id @default(uuid())
-  name               String
-  description        String?
-  creator            User                 @relation("groups", fields: [creator_id], references: [id])
-  creator_id         String
-  created_at         DateTime             @default(now())
-  updated_at         DateTime             @updatedAt
-  memberships        Membership[]
-  conversationId     String?              @unique // Added @unique here
-  conversation       Conversation?        @relation("GroupConversation", fields: [conversationId], references: [id], onDelete: Cascade)
-  habitGroups        HabitGroup[]
-  GroupHabitProposal GroupHabitProposal[]
+  id             String      @id @default(uuid())
+  name           String
+  description    String?
+  creator        User        @relation("groups", fields: [creator_id], references: [id])
+  creator_id     String
+  groupHabit     GroupHabit  @relation("GroupHabitRelation", fields: [groupHabitId], references: [id], onDelete: Cascade)
+  groupHabitId   String      @unique
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
+  memberships    Membership[]
+  conversation   Conversation?  @relation("GroupConversation")
 }
 
 model Membership {
   id        String   @id @default(uuid())
-  user      User     @relation(fields: [user_id], references: [id])
+  user      User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   user_id   String
   group     Group    @relation(fields: [group_id], references: [id], onDelete: Cascade)
   group_id  String
@@ -82,9 +80,9 @@ model Membership {
 
 model FriendRequest {
   id          String   @id @default(uuid())
-  sender      User     @relation("SentFriendRequests", fields: [sender_id], references: [id])
+  sender      User     @relation("SentFriendRequests", fields: [sender_id], references: [id], onDelete: Cascade)
   sender_id   String
-  receiver    User     @relation("ReceivedFriendRequests", fields: [receiver_id], references: [id])
+  receiver    User     @relation("ReceivedFriendRequests", fields: [receiver_id], references: [id], onDelete: Cascade)
   receiver_id String
   status      String   @default("pending")
   created_at  DateTime @default(now())
@@ -97,9 +95,9 @@ model FriendRequest {
 
 model Friendship {
   id         String   @id @default(uuid())
-  user       User     @relation("UserFriendships", fields: [user_id], references: [id])
+  user       User     @relation("UserFriendships", fields: [user_id], references: [id], onDelete: Cascade)
   user_id    String
-  friend     User     @relation("FriendFriendships", fields: [friend_id], references: [id])
+  friend     User     @relation("FriendFriendships", fields: [friend_id], references: [id], onDelete: Cascade)
   friend_id  String
   created_at DateTime @default(now())
 
@@ -109,19 +107,19 @@ model Friendship {
 }
 
 model Habit {
-  id               String          @id @default(uuid())
-  user             User            @relation(fields: [user_id], references: [id])
-  user_id          String
-  title            String
-  description      String?
-  frequency_count  Int
-  frequency_period FrequencyPeriod
-  goalStreak       Int?
-  created_at       DateTime        @default(now())
-  updated_at       DateTime        @updatedAt
-  habitTrackings   HabitTracking[]
-  streaks          Streak[]        @relation("HabitStreaks")
-  habitGroups      HabitGroup[]
+  id                 String               @id @default(uuid())
+  user               User                 @relation(fields: [user_id], references: [id])
+  user_id            String
+  title              String
+  description        String?
+  frequency_count    Int
+  frequency_period   FrequencyPeriod
+  goalStreak         Int?
+  created_at         DateTime             @default(now())
+  updated_at         DateTime             @updatedAt
+  habitTrackings     HabitTracking[]
+  streak             Streak?              @relation("HabitStreaks") // Changed from an array to a single relation
+  HabitParticipation HabitParticipation[]
 
   @@index([user_id])
 }
@@ -143,72 +141,60 @@ model HabitTracking {
   @@index([date])
 }
 
-model HabitGroup {
-  habit    Habit    @relation(fields: [habitId], references: [id])
-  habitId  String
-  group    Group    @relation(fields: [groupId], references: [id])
-  groupId  String
-  added_at DateTime @default(now())
-
-  @@unique([habitId, groupId])
+model GroupHabit {
+  id                String       @id @default(uuid())
+  group             Group?       @relation("GroupHabitRelation")
+  title             String               
+  frequency_count   Int
+  frequency_period  FrequencyPeriod
+  goalStreak        Int?
+  dayStart          String       @default("00:00")
+  created_at        DateTime     @default(now())
+  updated_at        DateTime     @updatedAt
+  participations    HabitParticipation[]
 }
 
-model GroupHabitProposal {
-  id               String                @id @default(uuid())
-  group            Group                 @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  groupId          String
-  title            String
-  description      String?
-  frequency_period FrequencyPeriod
-  proposer         User                  @relation(fields: [proposerId], references: [id])
-  proposerId       String
-  created_at       DateTime              @default(now())
-  agreements       GroupHabitAgreement[]
-}
+model HabitParticipation {
+  id           String     @id @default(uuid())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  habit        Habit      @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  habitId      String
+  groupHabit   GroupHabit @relation(fields: [groupHabitId], references: [id], onDelete: Cascade)
+  groupHabitId String
+  joined_at    DateTime   @default(now())
 
-model GroupHabitAgreement {
-  id         String             @id @default(uuid())
-  proposal   GroupHabitProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
-  proposalId String
-  user       User               @relation(fields: [userId], references: [id])
-  userId     String
-  decision   Boolean // true = agree, false = disagree
-  created_at DateTime           @default(now())
-
-  @@unique([proposalId, userId])
+  @@unique([userId, groupHabitId])
 }
 
 model Streak {
   id             String   @id @default(uuid())
-  habit          Habit    @relation("HabitStreaks", fields: [habit_id], references: [id])
-  habit_id       String
-  user           User     @relation("UserStreaks", fields: [user_id], references: [id])
+  habit          Habit    @relation("HabitStreaks", fields: [habit_id], references: [id], onDelete: Cascade)
+  habit_id       String   @unique
+  user           User     @relation("UserStreaks", fields: [user_id], references: [id], onDelete: Cascade)
   user_id        String
   current_streak Int      @default(0)
   max_streak     Int      @default(0)
   last_updated   DateTime
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
-
-  @@unique([habit_id, user_id])
-  @@index([habit_id])
-  @@index([user_id])
 }
 
 model Conversation {
   id           String                    @id @default(uuid())
+  groupId      String?                   @unique
+  group        Group?                    @relation("GroupConversation", fields: [groupId], references: [id], onDelete: Cascade)
   isGroup      Boolean                   @default(false) // false for DMs, true for group chats
-  name         String? // Optional name for group conversations
+  name         String? // Optional: e.g., a group name or conversation title
   created_at   DateTime                  @default(now())
   updated_at   DateTime                  @updatedAt
   messages     Message[]
   participants ConversationParticipant[]
-  group        Group?                    @relation("GroupConversation")
 }
 
 model ConversationParticipant {
   id             String       @id @default(uuid())
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   conversationId String
   user           User         @relation(fields: [userId], references: [id])
   userId         String
@@ -219,7 +205,7 @@ model ConversationParticipant {
 
 model Message {
   id             String       @id @default(uuid())
-  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   conversationId String
   sender         User         @relation(fields: [senderId], references: [id])
   senderId       String

@@ -1,8 +1,4 @@
-import express from "express";
-import { protectRoute } from "../middleware/protectRoute";
-
-const router = express.Router();
-
+"use strict";
 /*GET /api/conversations
 List all conversations for the logged-in user (both DMs and group chats).
 
@@ -26,4 +22,4 @@ Update conversation participant information (for example, to mark messages as re
 DELETE /api/conversations/:conversationId/messages/:messageId
 Delete a specific message (if you support message deletion).
 
-*/
+*/ 

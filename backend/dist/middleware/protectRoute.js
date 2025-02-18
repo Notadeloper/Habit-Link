@@ -53,10 +53,10 @@ const protectRoute = (req, res, next) => __awaiter(void 0, void 0, void 0, funct
     }
     catch (error) {
         if (error instanceof Error) {
-            console.log(error.message);
+            console.log("Error in protectRoute middleware", error.message);
         }
         else {
-            console.log("Unexpected error", error);
+            console.log("Unexpected error in protectRoute middleware", error);
         }
         res.status(500).json({ error: "Invalid Server Error" });
     }

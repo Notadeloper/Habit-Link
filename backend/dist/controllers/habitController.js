@@ -1,100 +1,100 @@
-import { RequestHandler } from "express";
-import prisma from "../prismaClient";
-import { CreateHabitRequestBody, CreateHabitTrackingRequestBody, UpdateHabitRequestBody, UpdateHabitTrackingRequestBody } from "../interfaces/Habit";
-import { format, startOfWeek, differenceInCalendarDays, differenceInCalendarWeeks, differenceInCalendarMonths, addDays } from 'date-fns';
-
-export const createHabit: RequestHandler = async (req, res) => {
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.recalculateStreaks = exports.deleteHabitTracking = exports.updateHabitTracking = exports.createHabitTracking = exports.deleteHabit = exports.updateHabit = exports.getHabitDetails = exports.getHabitsForUser = exports.createHabit = void 0;
+const prismaClient_1 = __importDefault(require("../prismaClient"));
+const date_fns_1 = require("date-fns");
+const createHabit = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
-        const creatorId = req.user?.id;
-        const { title, description, frequency_count, frequency_period, goalStreak } = req.body as CreateHabitRequestBody;
-
+        const creatorId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+        const { title, description, frequency_count, frequency_period, goalStreak } = req.body;
         if (!creatorId) {
             res.status(401).json({ error: 'Unauthorized' });
             return;
         }
-
         if (!title || !frequency_count || !frequency_period) {
             res.status(400).json({ error: "Missing required fields: title, frequency_count, frequency_period and habit are required" });
             return;
         }
-
         const count = Number(frequency_count);
         const goal = goalStreak !== undefined ? Number(goalStreak) : undefined;
-
-        const newHabit = await prisma.habit.create({
+        const newHabit = yield prismaClient_1.default.habit.create({
             data: {
                 user: { connect: { id: creatorId } },
                 title,
                 description,
                 frequency_count: count,
                 frequency_period,
-                goalStreak: goal,
-                streak: {
-                    create: {
-                        current_streak: 0,
-                        max_streak: 0,
-                        last_updated: new Date(),
-                        user: { connect: { id: creatorId } },
-                    },
-                },
+                goalStreak: goal
             }
         });
-
         res.status(201).json({ habit: newHabit });
-    } catch (error) {
+    }
+    catch (error) {
         if (error instanceof Error) {
             console.log("Error in createHabit controller", error.message);
-        } else {
+        }
+        else {
             console.log("Unexpected error in createHabit controller", error);
-        }     
+        }
         res.status(500).json({ error: 'Internal server error' });
     }
-}
-
-export const getHabitsForUser: RequestHandler = async (req, res) => {
+});
+exports.createHabit = createHabit;
+const getHabitsForUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
-        const userId = req.user?.id;
-
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
         if (!userId) {
             res.status(401).json({ error: 'Unauthorized' });
             return;
         }
-
-        const habits = await prisma.habit.findMany({
+        const habits = yield prismaClient_1.default.habit.findMany({
             where: { user_id: userId },
             orderBy: { updated_at: 'desc' },
             include: {
                 streak: true,
             },
         });
-
         if (!habits) {
             res.status(404).json({ error: 'No habits found for this user' });
             return;
         }
-
         res.status(200).json({ habits });
-    } catch (error) {
+    }
+    catch (error) {
         if (error instanceof Error) {
             console.log("Error in getHabitsForUser controller", error.message);
-        } else {
+        }
+        else {
             console.log("Unexpected error in getHabitsForUser controller", error);
-        }     
+        }
         res.status(500).json({ error: 'Internal server error' });
     }
-}
-
-export const getHabitDetails: RequestHandler = async (req, res) => {
+});
+exports.getHabitsForUser = getHabitsForUser;
+const getHabitDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
-        const userId = req.user?.id;
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
         const { habitId } = req.params;
-
         if (!userId) {
             res.status(401).json({ error: 'Unauthorized' });
             return;
         }
-
-        const habit = await prisma.habit.findUnique({
+        const habit = yield prismaClient_1.default.habit.findUnique({
             where: {
                 id: habitId,
                 user_id: userId,
@@ -108,173 +108,161 @@ export const getHabitDetails: RequestHandler = async (req, res) => {
                     include: {
                         groupHabit: {
                             include: {
-                                Group: true
+                                group: true
                             }
                         }
                     },
                 },
             },
         });
-
         if (!habit) {
             res.status(404).json({ error: 'No habits found for this user' });
             return;
         }
-
         res.status(200).json({ habit });
-    } catch (error) {
+    }
+    catch (error) {
         if (error instanceof Error) {
             console.log("Error in getHabitDetails controller", error.message);
-        } else {
+        }
+        else {
             console.log("Unexpected error in getHabitDetails controller", error);
-        }     
+        }
         res.status(500).json({ error: 'Internal server error' });
     }
-}
-
-export const updateHabit: RequestHandler = async (req, res) => {
+});
+exports.getHabitDetails = getHabitDetails;
+const updateHabit = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
-        const userId = req.user?.id;
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
         const { habitId } = req.params;
-        const { title, description, frequency_count, frequency_period, goalStreak } = req.body as UpdateHabitRequestBody;
-
+        const { title, description, frequency_count, frequency_period, goalStreak } = req.body;
         if (!userId) {
             res.status(401).json({ error: 'Unauthorized' });
             return;
         }
-
-        const user = await prisma.user.findUnique({
+        const user = yield prismaClient_1.default.user.findUnique({
             where: { id: userId },
         });
-
         if (!user) {
             res.status(404).json({ error: 'No user found' });
             return;
         }
-
-        const habit = await prisma.habit.findUnique({
+        const habit = yield prismaClient_1.default.habit.findUnique({
             where: { id: habitId, user_id: userId },
-          });
-
+        });
         if (!habit) {
             res.status(404).json({ error: 'This habit was not found for this user' });
             return;
         }
-
-        const updateData: Partial<UpdateHabitRequestBody> = {};
-        if (title !== undefined) updateData.title = title;
-        if (description !== undefined) updateData.description = description;
-        if (frequency_count !== undefined) updateData.frequency_count = Number(frequency_count);
-        if (frequency_period !== undefined) updateData.frequency_period = frequency_period;
-        if (goalStreak !== undefined) updateData.goalStreak = Number(goalStreak);
-    
-        const updatedHabit = await prisma.habit.update({
+        const updateData = {};
+        if (title !== undefined)
+            updateData.title = title;
+        if (description !== undefined)
+            updateData.description = description;
+        if (frequency_count !== undefined)
+            updateData.frequency_count = Number(frequency_count);
+        if (frequency_period !== undefined)
+            updateData.frequency_period = frequency_period;
+        if (goalStreak !== undefined)
+            updateData.goalStreak = Number(goalStreak);
+        const updatedHabit = yield prismaClient_1.default.habit.update({
             where: { id: habitId },
             data: updateData,
         });
-
         if (!updatedHabit) {
             res.status(404).json({ error: 'The habit was not successfully updated' });
             return;
         }
-
-        recalculateStreaks(habitId, userId, updatedHabit.frequency_count, updatedHabit.frequency_period, user.dayStart);
-    
+        (0, exports.recalculateStreaks)(habitId, userId, updatedHabit.frequency_count, updatedHabit.frequency_period, user.dayStart);
         res.status(200).json({ updatedHabit });
-    } catch (error) {
+    }
+    catch (error) {
         if (error instanceof Error) {
             console.log("Error in getHabitDetails controller", error.message);
-        } else {
+        }
+        else {
             console.log("Unexpected error in getHabitDetails controller", error);
-        }     
+        }
         res.status(500).json({ error: 'Internal server error' });
     }
-}
-
-export const deleteHabit: RequestHandler = async (req, res) => {
+});
+exports.updateHabit = updateHabit;
+const deleteHabit = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
-        const userId = req.user?.id;
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
         const { habitId } = req.params;
-
         if (!userId) {
             res.status(401).json({ error: 'Unauthorized' });
             return;
         }
-
-        const habit = await prisma.habit.findUnique({
+        const habit = yield prismaClient_1.default.habit.findUnique({
             where: {
                 id: habitId,
             },
         });
-
         if (!habit) {
             res.status(404).json({ error: 'No habits found for this user' });
             return;
         }
-
         if (habit.user_id !== userId) {
             res.status(404).json({ error: 'Not authorized to delete this habit' });
             return;
         }
-
-        await prisma.habit.delete({
+        yield prismaClient_1.default.habit.delete({
             where: {
                 id: habitId,
             },
         });
-
         res.status(200).json({ message: "Habit deleted successfully" });
-    } catch (error) {
+    }
+    catch (error) {
         if (error instanceof Error) {
             console.log("Error in getHabitDetails controller", error.message);
-        } else {
+        }
+        else {
             console.log("Unexpected error in getHabitDetails controller", error);
-        }     
+        }
         res.status(500).json({ error: 'Internal server error' });
     }
-}
-
-export const createHabitTracking: RequestHandler = async (req, res) => {
+});
+exports.deleteHabit = deleteHabit;
+const createHabitTracking = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
-        const userId = req.user?.id;
-
-        const user = await prisma.user.findUnique({
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+        const user = yield prismaClient_1.default.user.findUnique({
             where: {
                 id: userId,
             },
         });
-
         if (!user) {
             res.status(404).json({ error: 'No user found' });
             return;
         }
-
-        const { habitId, date, notes } = req.body as CreateHabitTrackingRequestBody;
-
+        const { habitId, date, notes } = req.body;
         if (!habitId || !date) {
             res.status(400).json({ error: "Missing required fields: habit_id and date are required" });
             return;
         }
-
         const trackingDate = new Date(date);
         if (isNaN(trackingDate.getTime())) {
             res.status(400).json({ error: "Invalid date format" });
             return;
         }
-
-        const habit = await prisma.habit.findUnique({
+        const habit = yield prismaClient_1.default.habit.findUnique({
             where: {
                 id: habitId,
                 user_id: userId
             },
         });
-
         if (!habit) {
             res.status(404).json({ error: 'This habit was not found for this user' });
             return;
         }
-
-        const newTracking = await prisma.habitTracking.create({
+        const newTracking = yield prismaClient_1.default.habitTracking.create({
             data: {
                 habit: { connect: { id: habitId } },
                 user: { connect: { id: userId } },
@@ -282,119 +270,105 @@ export const createHabitTracking: RequestHandler = async (req, res) => {
                 notes,
             },
         });
-
-        recalculateStreaks(habitId, user.id, habit.frequency_count, habit.frequency_period, user.dayStart);
-
+        (0, exports.recalculateStreaks)(habitId, user.id, habit.frequency_count, habit.frequency_period, user.dayStart);
         res.status(201).json({ habitTracking: newTracking });
-    } catch (error) {
+    }
+    catch (error) {
         if (error instanceof Error) {
             console.log("Error in getHabitDetails controller", error.message);
-        } else {
+        }
+        else {
             console.log("Unexpected error in getHabitDetails controller", error);
-        }     
+        }
         res.status(500).json({ error: 'Internal server error' });
     }
-}
-
-
-export const updateHabitTracking: RequestHandler = async (req, res) => {
+});
+exports.createHabitTracking = createHabitTracking;
+const updateHabitTracking = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
-        const userId = req.user?.id;
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
         const { trackingId } = req.params;
-        const { date, notes } = req.body as UpdateHabitTrackingRequestBody;
-
-        const user = await prisma.user.findUnique({
+        const { date, notes } = req.body;
+        const user = yield prismaClient_1.default.user.findUnique({
             where: { id: userId },
         });
-
         if (!user) {
             res.status(404).json({ error: 'No user found' });
             return;
         }
-
-        const trackingEntry = await prisma.habitTracking.findUnique({
+        const trackingEntry = yield prismaClient_1.default.habitTracking.findUnique({
             where: { id: trackingId },
             include: { habit: true },
         });
-      
-
         if (!trackingEntry || trackingEntry.user_id !== userId) {
-           res.status(404).json({ error: "Tracking entry not found" });
-           return;
+            res.status(404).json({ error: "Tracking entry not found" });
+            return;
         }
-
-        const updatedTracking = await prisma.habitTracking.update({
+        const updatedTracking = yield prismaClient_1.default.habitTracking.update({
             where: { id: trackingId },
             data: {
                 date: date ? new Date(date) : trackingEntry.date,
                 notes: notes !== undefined ? notes : trackingEntry.notes,
             },
         });
-
         const habit = trackingEntry.habit;
-
-        recalculateStreaks(habit.id, userId, habit.frequency_count, habit.frequency_period, user.dayStart);
-    
+        (0, exports.recalculateStreaks)(habit.id, userId, habit.frequency_count, habit.frequency_period, user.dayStart);
         res.status(200).json({ updatedTracking });
-    } catch (error) {
+    }
+    catch (error) {
         if (error instanceof Error) {
             console.log("Error in getHabitDetails controller", error.message);
-        } else {
+        }
+        else {
             console.log("Unexpected error in getHabitDetails controller", error);
-        }     
+        }
         res.status(500).json({ error: 'Internal server error' });
     }
-}
-
-
-export const deleteHabitTracking: RequestHandler = async (req, res) => {
+});
+exports.updateHabitTracking = updateHabitTracking;
+const deleteHabitTracking = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
-        const userId = req.user?.id;
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
         const { trackingId } = req.params;
-
-        const user = await prisma.user.findUnique({
+        const user = yield prismaClient_1.default.user.findUnique({
             where: { id: userId },
         });
-
         if (!user) {
             res.status(404).json({ error: 'No user found' });
             return;
         }
-
-        const trackingEntry = await prisma.habitTracking.findUnique({
+        const trackingEntry = yield prismaClient_1.default.habitTracking.findUnique({
             where: { id: trackingId },
             include: { habit: true },
         });
-      
         if (!trackingEntry || trackingEntry.user_id !== userId) {
-           res.status(404).json({ error: "Tracking entry not found" });
-           return;
+            res.status(404).json({ error: "Tracking entry not found" });
+            return;
         }
-
         const habit = trackingEntry.habit;
-
-        await prisma.habitTracking.delete({
+        yield prismaClient_1.default.habitTracking.delete({
             where: { id: trackingId }
-        })
-
-        recalculateStreaks(habit.id, userId, habit.frequency_count, habit.frequency_period, user.dayStart);
-    
+        });
+        (0, exports.recalculateStreaks)(habit.id, userId, habit.frequency_count, habit.frequency_period, user.dayStart);
         res.status(200).json({ message: "Habit tracking deleted successfully" });
-    } catch (error) {
+    }
+    catch (error) {
         if (error instanceof Error) {
             console.log("Error in getHabitDetails controller", error.message);
-        } else {
+        }
+        else {
             console.log("Unexpected error in getHabitDetails controller", error);
-        }     
+        }
         res.status(500).json({ error: 'Internal server error' });
     }
-}
-
-
+});
+exports.deleteHabitTracking = deleteHabitTracking;
 // All done in UTC
-export const recalculateStreaks = async (habitId: string, userId: string, frequency_count: number, frequency_period: "day" | "week" | "month", dayStart: string) => {
+const recalculateStreaks = (habitId, userId, frequency_count, frequency_period, dayStart) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const trackingEntries = await prisma.habitTracking.findMany({
+        const trackingEntries = yield prismaClient_1.default.habitTracking.findMany({
             where: {
                 habit_id: habitId,
                 user_id: userId,
@@ -403,31 +377,26 @@ export const recalculateStreaks = async (habitId: string, userId: string, freque
                 date: 'desc',
             },
         });
-
-
         // Counts num entries per defined period
-        const periodCounts: Map<string, { count: number; date: Date }> = new Map();
+        const periodCounts = new Map();
         for (const entry of trackingEntries) {
             const entryDate = new Date(entry.date);
-            const key = getPeriodKey(entryDate, frequency_period as "day" | "week" | "month", dayStart);
+            const key = getPeriodKey(entryDate, frequency_period, dayStart);
             console.log(key, entryDate);
             if (periodCounts.has(key)) {
-                periodCounts.get(key)!.count++;
-            } else {
+                periodCounts.get(key).count++;
+            }
+            else {
                 periodCounts.set(key, { count: 1, date: entryDate });
             }
         }
-
         // Find periods that can count towards the streak
         const qualifyingPeriods = Array.from(periodCounts.entries())
             .filter(([_, { count }]) => count >= frequency_count)
             .map(([key, obj]) => ({ key, date: obj.date }));
-
         // Sort these valid periods by date
         qualifyingPeriods.sort((a, b) => b.date.getTime() - a.date.getTime());
-
-        console.log("qualifyingPeriods", qualifyingPeriods)
-
+        console.log("qualifyingPeriods", qualifyingPeriods);
         const currentPeriodKey = getPeriodKey(new Date(), frequency_period, dayStart);
         let currentStreak = 0;
         if (qualifyingPeriods.length > 0 && qualifyingPeriods[0].key === currentPeriodKey) {
@@ -435,14 +404,15 @@ export const recalculateStreaks = async (habitId: string, userId: string, freque
             for (let i = 1; i < qualifyingPeriods.length; i++) {
                 if (isConsecutive(qualifyingPeriods[i - 1].key, qualifyingPeriods[i].key, frequency_period)) {
                     currentStreak++;
-                } else {
+                }
+                else {
                     break;
                 }
             }
-        } else {
+        }
+        else {
             currentStreak = 0;
         }
-      
         let maxStreak = 0;
         if (qualifyingPeriods.length > 0) {
             let tempStreak = 1;
@@ -450,17 +420,16 @@ export const recalculateStreaks = async (habitId: string, userId: string, freque
             for (let i = 1; i < qualifyingPeriods.length; i++) {
                 if (isConsecutive(qualifyingPeriods[i - 1].key, qualifyingPeriods[i].key, frequency_period)) {
                     tempStreak++;
-                } else {
+                }
+                else {
                     maxStreak = Math.max(maxStreak, tempStreak);
                     tempStreak = 1;
                 }
             }
             maxStreak = Math.max(maxStreak, tempStreak);
         }
-
         console.log("Recalculated streaks", currentStreak, maxStreak);
-
-        await prisma.streak.upsert({
+        yield prismaClient_1.default.streak.upsert({
             where: {
                 habit_id: habitId
             },
@@ -477,17 +446,19 @@ export const recalculateStreaks = async (habitId: string, userId: string, freque
                 last_updated: new Date(),
             },
         });
-    } catch (error) {
+    }
+    catch (error) {
         if (error instanceof Error) {
             console.log("Error in streak recalculation", error.message);
-        } else {
+        }
+        else {
             console.log("Unexpected error in streak recalculation", error);
-        }     
+        }
         throw error;
     }
-}
-
-export function adjustToUserDay(date: Date, dayStart: string): Date {
+});
+exports.recalculateStreaks = recalculateStreaks;
+function adjustToUserDay(date, dayStart) {
     const [hour, minute] = dayStart.split(":").map(Number);
     const adjusted = new Date(date);
     // Set the date's time to the user's day start.
@@ -495,60 +466,65 @@ export function adjustToUserDay(date: Date, dayStart: string): Date {
     // If the original date is before the adjusted time, it belongs to the previous day.
     console.log(date.getTime(), adjusted.getTime());
     if (date.getTime() <= adjusted.getTime()) {
-        return addDays(adjusted, -1);
+        return (0, date_fns_1.addDays)(adjusted, -1);
     }
     return adjusted;
 }
-
-
-export function getPeriodKey(date: Date, frequency_period: "day" | "week" | "month", dayStart: string): string {
+function getPeriodKey(date, frequency_period, dayStart) {
     try {
         if (frequency_period === "day") {
             const adjustedDate = adjustToUserDay(date, dayStart);
-            return format(adjustedDate, "yyyy-MM-dd");
-        } else if (frequency_period === "week") {
+            return (0, date_fns_1.format)(adjustedDate, "yyyy-MM-dd");
+        }
+        else if (frequency_period === "week") {
             // Adjust the date first
             const adjustedDate = adjustToUserDay(date, dayStart);
             // Get Monday as the start of the week (weekStartsOn: 1)
-            const monday = startOfWeek(adjustedDate, { weekStartsOn: 1 });
-            return format(monday, "yyyy-MM-dd");
-        } else if (frequency_period === "month") {
+            const monday = (0, date_fns_1.startOfWeek)(adjustedDate, { weekStartsOn: 1 });
+            return (0, date_fns_1.format)(monday, "yyyy-MM-dd");
+        }
+        else if (frequency_period === "month") {
             const adjustedDate = adjustToUserDay(date, dayStart);
-            return format(adjustedDate, "yyyy-MM");
+            return (0, date_fns_1.format)(adjustedDate, "yyyy-MM");
         }
         return "";
-    } catch (error) {
+    }
+    catch (error) {
         if (error instanceof Error) {
             console.log("Error in getPeriodKey", error.message);
-        } else {
+        }
+        else {
             console.log("Unexpected error in getPeriodKey", error);
-        }     
+        }
         throw error;
     }
-  }
-
-export function isConsecutive(prevKey: string, currKey: string, frequency_period: "day" | "week" | "month"): boolean {
+}
+function isConsecutive(prevKey, currKey, frequency_period) {
     try {
         if (frequency_period === "day") {
             const prevDate = new Date(prevKey);
             const currDate = new Date(currKey);
-            return differenceInCalendarDays(prevDate, currDate) === 1;
-        } else if (frequency_period === "week") {
+            return (0, date_fns_1.differenceInCalendarDays)(prevDate, currDate) === 1;
+        }
+        else if (frequency_period === "week") {
             const prevDate = new Date(prevKey);
             const currDate = new Date(currKey);
-            return differenceInCalendarWeeks(prevDate, currDate, { weekStartsOn: 1 }) === 1;
-        } else if (frequency_period === "month") {
+            return (0, date_fns_1.differenceInCalendarWeeks)(prevDate, currDate, { weekStartsOn: 1 }) === 1;
+        }
+        else if (frequency_period === "month") {
             const prevDate = new Date(prevKey);
             const currDate = new Date(currKey);
-            return differenceInCalendarMonths(prevDate, currDate) === 1;
+            return (0, date_fns_1.differenceInCalendarMonths)(prevDate, currDate) === 1;
         }
         return false;
-    } catch (error) {
+    }
+    catch (error) {
         if (error instanceof Error) {
             console.log("Error in isConsecutive", error.message);
-        } else {
+        }
+        else {
             console.log("Unexpected error in isConsecutive", error);
-        }     
+        }
         throw error;
     }
 }

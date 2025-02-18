@@ -23,7 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.logout = exports.login = exports.signup = void 0;
+exports.getMe = exports.logout = exports.login = exports.signup = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const prismaClient_1 = __importDefault(require("../prismaClient"));
 const generateToken_1 = require("../lib/utils/generateToken");
@@ -101,7 +101,6 @@ exports.login = login;
 const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         res.clearCookie("jwt", {
-            expires: new Date(0),
             path: "/",
             httpOnly: true,
             secure: process.env.NODE_ENV !== "development",
@@ -120,3 +119,34 @@ const logout = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.logout = logout;
+const getMe = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+        if (!userId) {
+            res.status(401).json({ error: "Unauthorized: No user found in request" });
+            return;
+        }
+        const user = yield prismaClient_1.default.user.findUnique({
+            where: {
+                id: userId,
+            },
+        });
+        if (!user) {
+            res.status(404).json({ error: "User not found" });
+            return;
+        }
+        const { password: _ } = user, userWithoutPassword = __rest(user, ["password"]);
+        res.status(200).json({ user: userWithoutPassword });
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            console.log("Error in login controller", error.message);
+        }
+        else {
+            console.log("Unexpected error in login controller", error);
+        }
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+exports.getMe = getMe;
