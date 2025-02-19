@@ -11,7 +11,7 @@ router.get("/:conversationId", protectRoute, getConversation);
 
 router.post("/:userId", protectRoute, createConversation);
 
-router.post("/:conversationId", protectRoute, sendMessage);
+router.post("/message/:conversationId", protectRoute, sendMessage);
 
 
 

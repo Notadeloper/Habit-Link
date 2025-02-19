@@ -108,7 +108,7 @@ export const getHabitDetails: RequestHandler = async (req, res) => {
                     include: {
                         groupHabit: {
                             include: {
-                                Group: true
+                                group: true
                             }
                         }
                     },

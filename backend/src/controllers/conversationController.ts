@@ -83,7 +83,7 @@ export const getConversation: RequestHandler = async (req, res) => {
 export const createConversation: RequestHandler = async (req, res) => {
     try {
         const userId = req.user?.id;
-        const { otherParticipantId } = req.params;
+        const { userId: otherParticipantId } = req.params;
 
         if (!userId) {
             res.status(401).json({ error: "Unauthorized: No user found in request" });
