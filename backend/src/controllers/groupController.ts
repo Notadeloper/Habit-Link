@@ -704,9 +704,9 @@ export const getParticipatingHabitUsers: RequestHandler = async (req, res) => {
         res.status(200).json({ participants })
     } catch (error) {
         if (error instanceof Error) {
-            console.log("Error in assignAdmin controller", error.message);
+            console.log("Error in getParticipatingHabitUsers controller", error.message);
         } else {
-            console.log("Unexpected error in assignAdmin controller", error);
+            console.log("Unexpected error in getParticipatingHabitUsers controller", error);
         }     
         res.status(500).json({ error: 'Internal server error' });
     }
