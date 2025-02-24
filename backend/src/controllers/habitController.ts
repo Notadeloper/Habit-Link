@@ -410,7 +410,6 @@ export const recalculateStreaks = async (habitId: string, userId: string, freque
         for (const entry of trackingEntries) {
             const entryDate = new Date(entry.date);
             const key = getPeriodKey(entryDate, frequency_period as "day" | "week" | "month", dayStart);
-            console.log(key, entryDate);
             if (periodCounts.has(key)) {
                 periodCounts.get(key)!.count++;
             } else {
@@ -425,8 +424,6 @@ export const recalculateStreaks = async (habitId: string, userId: string, freque
 
         // Sort these valid periods by date
         qualifyingPeriods.sort((a, b) => b.date.getTime() - a.date.getTime());
-
-        console.log("qualifyingPeriods", qualifyingPeriods)
 
         const currentPeriodKey = getPeriodKey(new Date(), frequency_period, dayStart);
         let currentStreak = 0;
@@ -457,8 +454,6 @@ export const recalculateStreaks = async (habitId: string, userId: string, freque
             }
             maxStreak = Math.max(maxStreak, tempStreak);
         }
-
-        console.log("Recalculated streaks", currentStreak, maxStreak);
 
         await prisma.streak.upsert({
             where: {
@@ -493,8 +488,7 @@ export function adjustToUserDay(date: Date, dayStart: string): Date {
     // Set the date's time to the user's day start.
     adjusted.setUTCHours(hour, minute, 0, 0);
     // If the original date is before the adjusted time, it belongs to the previous day.
-    console.log(date.getTime(), adjusted.getTime());
-    if (date.getTime() <= adjusted.getTime()) {
+    if (date.getTime() < adjusted.getTime()) {
         return addDays(adjusted, -1);
     }
     return adjusted;
