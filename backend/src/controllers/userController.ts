@@ -9,7 +9,7 @@ export const getUserProfile: RequestHandler = async (req, res) => {
     try {
         const { userId } = req.params;
         const loggedInUserId = req.user?.id;
-
+        
         const targetUser = await prisma.user.findUnique({
             where: { id: userId },
             select: {
@@ -17,43 +17,52 @@ export const getUserProfile: RequestHandler = async (req, res) => {
                 username: true,
                 fullName: true,
                 email: true,
-                friendships: true,
-                friendFriendships: true,
                 dayStart: true,
+                friendships: { select: { friend_id: true } },
+                friendFriendships: { select: { friend_id: true } },
             },
         });
-
+        
         if (!targetUser) {
             res.status(404).json({ error: "User not found" });
-            return;
+            return
         }
-
-        const totalFriendCount = targetUser.friendships.length + targetUser.friendFriendships.length;
-
+        
+        const mergedFriendships = [
+            ...targetUser.friendships.map(f => f.friend_id),
+            ...targetUser.friendFriendships.map(f => f.friend_id),
+        ];
+        const totalFriendCount = mergedFriendships.length;
+        
         if (targetUser.id === loggedInUserId) {
-            res.status(200).json({ user: targetUser, totalFriendCount });
+            res.status(200).json({
+                user: {
+                    ...targetUser,
+                    friendships: mergedFriendships,
+                    totalFriendCount,
+                }
+            });
             return;
         }
-
-        const isFriend = [ ...targetUser.friendships, ...targetUser.friendFriendships].some((friendship) => 
-            friendship.user_id === loggedInUserId || friendship.friend_id === loggedInUserId
-        ); 
+        
+        const isFriend = mergedFriendships.includes(loggedInUserId!);
         if (isFriend) {
             res.status(200).json({
                 user: {
                     username: targetUser.username,
                     fullName: targetUser.fullName,
-                    totalFriendCount: totalFriendCount,
-                },
+                    friendships: mergedFriendships,
+                    totalFriendCount,
+                }
             });
             return;
         }
-
+        
         res.status(200).json({
             user: {
                 username: targetUser.username,
-                totalFriendCount: totalFriendCount,
-            },
+                totalFriendCount,
+            }
         });
     } catch (error) {
         if (error instanceof Error) {
@@ -138,39 +147,60 @@ export const viewFriends: RequestHandler = async (req, res) => {
     try {
         const { userId } = req.params;
         const loggedInUserId = req.user?.id;
-
+    
         if (!loggedInUserId) {
             res.status(401).json({ error: "Unauthorized: No user found in request" });
             return;
         }
-
+    
         const targetUser = await prisma.user.findUnique({
             where: { id: userId },
             select: {
-                id: true,
-                username: true,
-                friendships: true,
-                friendFriendships: true,
+                friendships: {
+                    select: {
+                        friend: {
+                            select: {
+                                id: true,
+                                username: true,
+                            },
+                        },
+                    },
+                },
+                friendFriendships: {
+                    select: {
+                        user: {
+                            select: {
+                                id: true,
+                                username: true,
+                            },
+                        },
+                    },
+                },
             },
         });
-
+    
         if (!targetUser) {
             res.status(404).json({ error: "User not found" });
             return;
         }
-
-        const isFriend = [ ...targetUser.friendships, ...targetUser.friendFriendships].some((friendship) => 
-            friendship.user_id === loggedInUserId || friendship.friend_id === loggedInUserId
-        ); 
-
-        const totalFriendships = [...targetUser.friendships, ...targetUser.friendFriendships];
-
-        if (targetUser.id !== loggedInUserId && !isFriend) {
+    
+        const isFriend =
+            targetUser.friendships.some((f) => f.friend.id === loggedInUserId) ||
+            targetUser.friendFriendships.some((f) => f.user.id === loggedInUserId);
+    
+        if (userId !== loggedInUserId && !isFriend) {
             res.status(401).json({ error: "Cannot view friends" });
             return;
         }
-
-        res.status(200).json({ username: targetUser.username, friendList: totalFriendships });
+    
+        const friendListFromFriendships = targetUser.friendships.map((f) => f.friend);
+        const friendListFromFriendFriendships = targetUser.friendFriendships.map((f) => f.user);
+        const combinedFriendList = [
+          ...friendListFromFriendships,
+          ...friendListFromFriendFriendships,
+        ];
+    
+        res.status(200).json({ friendList: combinedFriendList });
     } catch (error) {
         if (error instanceof Error) {
             console.log("Error in viewFriends controller", error.message);
@@ -288,7 +318,8 @@ export const sendFriendRequest: RequestHandler = async (req, res) => {
 
         res.status(200).json({ 
             message: "Friend request sent successfully",
-            request: newFriendRequest 
+            request: newFriendRequest,
+            id: newFriendRequest.id
         });
         
     } catch (error) {
