@@ -94,7 +94,7 @@ export const getHabitDetails: RequestHandler = async (req, res) => {
             return;
         }
 
-        const habit = await prisma.habit.findUnique({
+        const habit = await prisma.habit.findFirst({
             where: {
                 id: habitId,
                 user_id: userId,
@@ -103,7 +103,12 @@ export const getHabitDetails: RequestHandler = async (req, res) => {
                 habitTrackings: {
                     orderBy: { date: "desc" },
                 },
-                streak: true,
+                streak: {
+                    select: {
+                        max_streak: true,
+                        current_streak: true,
+                    }
+                },
                 HabitParticipation: {
                     include: {
                         groupHabit: {

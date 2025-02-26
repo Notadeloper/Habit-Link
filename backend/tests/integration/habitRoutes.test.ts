@@ -12,6 +12,7 @@ describe("Habit Routes Integration Tests", () => {
     let otherUserId: string;
     let groupId: string;
     let habitId: string;
+    let tracking2Id: string;
 
     // Optionally clear the database before each test
     beforeEach(async () => {
@@ -88,12 +89,36 @@ describe("Habit Routes Integration Tests", () => {
             .send({
                 title: "Test Habit",
                 description: "Test Description",
-                frequency_count: 2,
-                frequency_period: "week",
+                frequency_count: 1,
+                frequency_period: "day",
             });
 
         expect(res6.statusCode).toBe(201);
         habitId = res6.body.habit.id;
+
+        const res7 = await request(app)
+            .post("/api/habit/tracking")
+            .set("Cookie", userCookie)
+            .send({
+                habitId,
+                date: "2025-02-18T03:45:00.000Z",
+                notes: "loggin3!"
+            });
+
+        expect(res7.statusCode).toBe(201);
+
+        const res8 = await request(app)
+            .post("/api/habit/tracking")
+            .set("Cookie", userCookie)
+            .send({
+                habitId,
+                date: "2025-02-19T03:46:00.000Z",
+                notes: "loggin4!"
+            });
+
+        expect(res8.statusCode).toBe(201);
+
+        tracking2Id = res8.body.habitTracking.id;
     });
   
     afterAll(async () => {
@@ -136,8 +161,8 @@ describe("Habit Routes Integration Tests", () => {
             expect(res.body.habits[0]).toMatchObject({
                 title: "Test Habit",
                 description: "Test Description",
-                frequency_count: 2,
-                frequency_period: "week",
+                frequency_count: 1,
+                frequency_period: "day",
             });
           });
     });
@@ -152,10 +177,10 @@ describe("Habit Routes Integration Tests", () => {
             expect(res.body.habit).toHaveProperty("id", habitId);
             expect(res.body.habit).toHaveProperty("title", "Test Habit");
             expect(res.body.habit).toHaveProperty("description", "Test Description");
-            expect(res.body.habit).toHaveProperty("frequency_count", 2);
-            expect(res.body.habit).toHaveProperty("frequency_period", "week");
+            expect(res.body.habit).toHaveProperty("frequency_count", 1);
+            expect(res.body.habit).toHaveProperty("frequency_period", "day");
             expect(Array.isArray(res.body.habit.habitTrackings)).toBe(true);
-            expect(res.body.habit.habitTrackings).toHaveLength(0);
+            expect(res.body.habit.habitTrackings).toHaveLength(2);
         });
 
         it("should not be able to get the details when logged in as another user", async () => {
@@ -170,22 +195,164 @@ describe("Habit Routes Integration Tests", () => {
     describe("PUT /api/habit/:habitId", () => {
         it("should update a habit if belonging to user", async () => {
             const res = await request(app)
+                .put(`/api/habit/${habitId}`)
+                .set("Cookie", userCookie)
+                .send({
+                    title: "Updated Habit",
+                });
+
+            expect(res.statusCode).toBe(200);
+
+            const res2 = await request(app)
                 .get(`/api/habit/${habitId}`)
                 .set("Cookie", userCookie)
 
-            expect(res.statusCode).toBe(200);
-            expect(res.body.habit).toHaveProperty("id", habitId);
-            expect(res.body.habit).toHaveProperty("title", "Test Habit");
-            expect(res.body.habit).toHaveProperty("description", "Test Description");
-            expect(res.body.habit).toHaveProperty("frequency_count", 2);
-            expect(res.body.habit).toHaveProperty("frequency_period", "week");
-            expect(Array.isArray(res.body.habit.habitTrackings)).toBe(true);
-            expect(res.body.habit.habitTrackings).toHaveLength(0);
+            expect(res2.body.habit).toHaveProperty("id", habitId);
+            expect(res2.body.habit).toHaveProperty("title", "Updated Habit");
         });
 
-        it("should not be able tto update if not for user", async () => {
+        it("should not be able to update if not for user", async () => {
             const res = await request(app)
+                .put(`/api/habit/${habitId}`)
+                .set("Cookie", friendCookie)
+                .send({
+                    title: "Updated Habit",
+                });
+
+            expect(res.statusCode).toBe(404);
+        });
+    });
+
+    describe("DELETE /api/habit/:habitId", () => {
+        it("should update a habit if belonging to user", async () => {
+            const res = await request(app)
+                .delete(`/api/habit/${habitId}`)
+                .set("Cookie", userCookie)
+
+            expect(res.statusCode).toBe(200);
+
+            const res2 = await request(app)
+                .get("/api/habit")
+                .set("Cookie", userCookie)
+
+            expect(res2.statusCode).toBe(200);
+            expect(res2.body.habits).toHaveLength(0);
+        });
+
+        it("should not be able to delete if not for user", async () => {
+            const res = await request(app)
+                .delete(`/api/habit/${habitId}`)
+                .set("Cookie", friendCookie)
+
+            expect(res.statusCode).toBe(404);
+        });
+    });
+
+    describe("POST /api/habit/tracking", () => {
+        it("should add a habit tracking if belonging to user", async () => {
+            const now = new Date().toISOString();
+
+            const res = await request(app)
+                .post("/api/habit/tracking")
+                .set("Cookie", userCookie)
+                .send({
+                    habitId,
+                    date: now,
+                    notes: "loggin!"
+                });
+
+            expect(res.statusCode).toBe(201);
+
+            const res2 = await request(app)
                 .get(`/api/habit/${habitId}`)
+                .set("Cookie", userCookie)
+
+            expect(res2.statusCode).toBe(200);
+            expect(Array.isArray(res2.body.habit.habitTrackings)).toBe(true);
+            expect(res2.body.habit.habitTrackings).toHaveLength(3);
+            expect(res2.body.habit.streak.max_streak).toBe(2);
+            expect(res2.body.habit.streak.current_streak).toBe(1);
+        });
+
+        it("should not be able to track if not users habit", async () => {
+            const now = new Date().toISOString();
+
+            const res = await request(app)
+                .post("/api/habit/tracking")
+                .set("Cookie", friendCookie)
+                .send({
+                    habitId,
+                    date: now,
+                    notes: "loggin!"
+                });
+
+            expect(res.statusCode).toBe(404);
+        });
+    });
+
+    describe("PUT /api/habit/tracking", () => {
+        it("should modify a habit tracking if belonging to a user", async () => {
+            const now = new Date().toISOString();
+
+            const res = await request(app)
+                .put(`/api/habit/tracking/${tracking2Id}`)
+                .set("Cookie", userCookie)
+                .send({
+                    date: now,
+                    notes: "logginbutedited!"
+                });
+
+            expect(res.statusCode).toBe(200);
+
+            const res2 = await request(app)
+                .get(`/api/habit/${habitId}`)
+                .set("Cookie", userCookie)
+
+            expect(res2.statusCode).toBe(200);
+            expect(Array.isArray(res2.body.habit.habitTrackings)).toBe(true);
+            expect(res2.body.habit.habitTrackings).toHaveLength(2);
+            expect(res2.body.habit.streak.max_streak).toBe(1);
+            expect(res2.body.habit.streak.current_streak).toBe(1);
+        });
+
+        it("should not modify a habit tracking if not belonging to the user", async () => {
+            const now = new Date().toISOString();
+
+            const res = await request(app)
+                .put(`/api/habit/tracking/${tracking2Id}`)
+                .set("Cookie", friendCookie)
+                .send({
+                    date: now,
+                    notes: "logginbutedited!"
+                });
+
+            expect(res.statusCode).toBe(404);
+        });
+    });
+
+    describe("DELETE /api/habit/tracking", () => {
+        it("should delete a habit tracking if belonging to a user", async () => {
+
+            const res = await request(app)
+                .delete(`/api/habit/tracking/${tracking2Id}`)
+                .set("Cookie", userCookie)
+
+            expect(res.statusCode).toBe(200);
+
+            const res2 = await request(app)
+                .get(`/api/habit/${habitId}`)
+                .set("Cookie", userCookie)
+
+            expect(res2.statusCode).toBe(200);
+            expect(Array.isArray(res2.body.habit.habitTrackings)).toBe(true);
+            expect(res2.body.habit.habitTrackings).toHaveLength(1);
+            expect(res2.body.habit.streak.max_streak).toBe(1);
+            expect(res2.body.habit.streak.current_streak).toBe(0);
+        });
+
+        it("should not modify a habit tracking if not belonging to the user", async () => {
+            const res = await request(app)
+                .delete(`/api/habit/tracking/${tracking2Id}`)
                 .set("Cookie", friendCookie)
 
             expect(res.statusCode).toBe(404);

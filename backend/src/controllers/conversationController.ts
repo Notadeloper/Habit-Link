@@ -95,6 +95,32 @@ export const createConversation: RequestHandler = async (req, res) => {
             return;
         }
 
+        const existingConversation = await prisma.conversation.findFirst({
+            where: {
+                isGroup: false,
+                AND: [
+                    {
+                        participants: {
+                            some: { userId: userId },
+                        },
+                    },
+                    {
+                        participants: {
+                            some: { userId: otherParticipantId },
+                        },
+                    },
+                ],
+            },
+            include: {
+                participants: true,
+            },
+        });
+      
+        if (existingConversation) {
+        res.status(400).json({ error: "Conversation already exists" });
+        return;
+        }
+
         const conversation = await prisma.conversation.create({
             data: {
                 isGroup: false,

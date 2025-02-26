@@ -1,7 +1,6 @@
 import request from 'supertest';
 import app from '../../src/app';
 import prisma from '../../src/prismaClient';
-import exp from 'constants';
 
 describe("Group Routes Integration Tests", () => {
     let userCookie: string;
@@ -11,6 +10,7 @@ describe("Group Routes Integration Tests", () => {
     let otherCookie: string;
     let otherUserId: string;
     let groupId: string;
+    let habitId: string;
 
     // Optionally clear the database before each test
     beforeEach(async () => {
@@ -80,6 +80,19 @@ describe("Group Routes Integration Tests", () => {
         expect(res5.statusCode).toBe(201);
 
         groupId = res5.body.group.id;
+
+        const res6 = await request(app)
+        .post("/api/habit")
+        .set("Cookie", userCookie)
+        .send({
+            title: "Test Habit",
+            description: "Test Description",
+            frequency_count: 1,
+            frequency_period: "day",
+        });
+
+        expect(res6.statusCode).toBe(201);
+        habitId = res6.body.habit.id;
     });
   
     afterAll(async () => {
@@ -351,6 +364,72 @@ describe("Group Routes Integration Tests", () => {
             expect(res3.statusCode).toBe(200);
             const membershipUserIds = res3.body.group.memberships.map((membership: any) => membership.user.id);
             expect(membershipUserIds).not.toContain(signedinUserId);     
+        });
+    });
+
+    describe("POST /api/group/:groupId/habits/assign", () => {
+        it("assigns a user's habit to the group and checks if it can reassign", async () => {
+            const res = await request(app)
+                .post(`/api/group/${groupId}/habits/assign`)
+                .set("Cookie", userCookie)
+                .send({ habitId: habitId });
+
+            expect(res.statusCode).toBe(200);
+
+            const res2 = await request(app)
+                .get(`/api/group/${groupId}`)
+                .set("Cookie", userCookie);
+
+            expect(res2.statusCode).toBe(200);
+            expect(res2.body.group.groupHabit.participations.length).toBe(1);
+            expect(res2.body.group.groupHabit.participations[0].habit.id).toBe(habitId);
+
+            const res3 = await request(app)
+                .post("/api/habit")
+                .set("Cookie", userCookie)
+                .send({
+                    title: "Test Habit 2",
+                    description: "Test Description",
+                    frequency_count: 1,
+                    frequency_period: "day",
+                });
+            
+            expect(res3.statusCode).toBe(201);
+            const newHabitId = res3.body.habit.id;
+            
+            const res4 = await request(app)
+                .post(`/api/group/${groupId}/habits/assign`)
+                .set("Cookie", userCookie)
+                .send({ habitId: newHabitId });
+
+            expect(res4.statusCode).toBe(200);
+
+            const res5 = await request(app)
+                .get(`/api/group/${groupId}`)
+                .set("Cookie", userCookie);
+
+            expect(res5.statusCode).toBe(200);
+            expect(res5.body.group.groupHabit.participations.length).toBe(1);
+            expect(res5.body.group.groupHabit.participations[0].habit.id).toBe(newHabitId);
+        });
+    });
+
+    describe("GET /api/group/:groupId/habits/participation", () => {
+        it("checks a list of users that are participating is correct", async () => {
+            const res = await request(app)
+                .post(`/api/group/${groupId}/habits/assign`)
+                .set("Cookie", userCookie)
+                .send({ habitId: habitId });
+
+            expect(res.statusCode).toBe(200);
+
+            const res2 = await request(app)
+                .get(`/api/group/${groupId}/habits/participation`)
+                .set("Cookie", userCookie);
+            
+            expect(res2.statusCode).toBe(200);
+            expect(res2.body.participants.length).toBe(1);
+            expect(res2.body.participants[0].id).toBe(signedinUserId);
         });
     });
 });
