@@ -134,7 +134,11 @@ export const getGroupInfoById: RequestHandler = async (req, res) => {
         const group = await prisma.group.findUnique({
             where: { id: groupId },
             include: {
-                memberships: true,
+                memberships: {
+                    include: {
+                        user: true
+                    }
+                },
                 conversation: true,
                 groupHabit: {
                     include: {
@@ -293,6 +297,11 @@ export const addUserToGroup: RequestHandler = async (req, res) => {
 
         if (!userId) {
             res.status(401).json({ error: "Unauthorized: No user found in request" });
+            return;
+        }
+
+        if (!memberId || !groupId) {
+            res.status(400).json({ error: "Bad Request: Member ID and Group ID are required" });
             return;
         }
 

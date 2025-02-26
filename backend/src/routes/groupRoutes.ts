@@ -22,7 +22,7 @@ router.put("/:groupId", protectRoute, updateGroup);
 // Delete a group (only if admin)
 router.delete("/:groupId", protectRoute, deleteGroup);
 
-// Add member to group
+// Add member to group (only if admin)
 router.post("/:groupId/members", protectRoute, addUserToGroup);
 
 // Remove user from group (only if admin)
