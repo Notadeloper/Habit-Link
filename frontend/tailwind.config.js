@@ -10,6 +10,9 @@ module.exports = {
             rubik: ['Rubik-Regular', 'sans-serif']
         },
         colors: {
+            blue: {
+                DEFAULT: "#3B82F6",
+            },
             primary: {
               100: "#93c47d0A",
               200: "#93c47d1A",

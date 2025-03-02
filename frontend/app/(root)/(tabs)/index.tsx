@@ -12,6 +12,7 @@ export default function Index() {
     >
         <Text className="font-bold text-lg my-10">Welcome to Habit Link</Text>
         <Link href="/sign-in">Sign In</Link>
+        <Link href="/sign-up">Sign Up</Link>
         <Link href="/profile">Profile</Link>
     </View>
   );
