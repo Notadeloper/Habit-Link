@@ -64,7 +64,7 @@ export const login: RequestHandler = async (req, res) => {
                 OR: [{ username: usernameOrEmail }, { email: usernameOrEmail }],
             },
         });
-
+        
         const isPasswordCorrect = await bcrypt.compare(password, user?.password || "");
 
         if (!user || !isPasswordCorrect) {
