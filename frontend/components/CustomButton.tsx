@@ -5,28 +5,28 @@ import { ButtonProps } from "@/types/type";
 const getBgVariantStyle = (variant: ButtonProps["bgVariant"]) => {
   switch (variant) {
   case "secondary":
-    return "bg-gray-500";
+    return "bg-primary-100";
   case "danger":
-    return "bg-red-500";
+    return "bg-danger";
   case "success":
-    return "bg-green-500";
+    return "bg-success";
   case "outline":
-    return "bg-transparent border-neutral-300 border-[0.5px]";
+    return "bg-transparent border border-primary-200";
   default:
-    return "bg-[#53a92c]";
+    return "bg-primary-500";
   }
 };
 
 const getTextVariantStyle = (variant: ButtonProps["textVariant"]) => {
   switch (variant) {
   case "primary":
-    return "text-black";
+    return "text-black-300";
   case "secondary":
-    return "text-gray-100";
+    return "text-primary-700";
   case "danger":
-    return "text-red-100";
+    return "text-white";
   case "success":
-    return "text-green-100";
+    return "text-white";
   default:
     return "text-white";
   }
@@ -73,11 +73,11 @@ const CustomButton = ({
   return (
     <TouchableOpacity
       onPress={onPress}
-      className={`${sizeStyle} rounded-full flex flex-row justify-center items-center shadow-md shadow-neutral-400/70 ${getBgVariantStyle(bgVariant)} ${className}`}
+      className={`${sizeStyle} rounded-full flex flex-row justify-center items-center ${getBgVariantStyle(bgVariant)} ${className}`}
       {...props}
     >
       {IconLeft && <IconLeft />}
-      <Text className={`${fontSizeStyle} font-bold ${getTextVariantStyle(textVariant)}`}>
+      <Text className={`${fontSizeStyle} font-rubik-bold ${getTextVariantStyle(textVariant)}`}>
         {title}
       </Text>
       {IconRight && <IconRight />}

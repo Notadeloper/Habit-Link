@@ -6,6 +6,10 @@ import { useEffect } from "react";
 import { SplashScreen } from "expo-router";
 import Toast from "react-native-toast-message";
 
+import { AuthProvider } from "@/providers/AuthProvider";
+import { HabitsProvider } from "@/providers/HabitsProvider";
+import { SocialProvider } from "@/providers/SocialProvider";
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     "Rubik-Bold": require("../assets/fonts/Rubik-Bold.ttf"),
@@ -21,9 +25,13 @@ export default function RootLayout() {
   if (!fontsLoaded) return null;
     
   return (
-    <>
-      <Stack screenOptions={{ headerShown: false }} />
-      <Toast />
-    </>
+    <AuthProvider>
+      <HabitsProvider>
+        <SocialProvider>
+          <Stack screenOptions={{ headerShown: false }} />
+          <Toast />
+        </SocialProvider>
+      </HabitsProvider>
+    </AuthProvider>
   );
 }

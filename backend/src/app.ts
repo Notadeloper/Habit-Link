@@ -21,6 +21,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
   : ['http://localhost:8081']; // fallback for dev
 
 app.use(cors({
+    credentials: true,
     origin: (
         origin: string | undefined,
         callback: (err: Error | null, allow?: boolean) => void

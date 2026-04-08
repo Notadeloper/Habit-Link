@@ -3,9 +3,6 @@ import {
   View,
   Text,
   Image,
-  KeyboardAvoidingView,
-  TouchableWithoutFeedback,
-  Keyboard,
   Platform,
 } from "react-native";
   
@@ -23,29 +20,25 @@ const InputField = ({
   ...props
 }: InputFieldProps) => {
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <View className="my-2 w-full">
-          <Text className={`text-lg font-JakartaSemiBold mb-3 ${labelStyle}`}>
-            {label}
-          </Text>
-          <View
-            className={`flex flex-row justify-start items-center relative bg-neutral-100 rounded-full border border-neutral-100 focus:border-primary-500  ${containerStyle}`}
-          >
-            {icon && (
-              <Image source={icon} className={`w-6 h-6 ml-4 ${iconStyle}`} />
-            )}
-            <TextInput
-              className={`rounded-full p-4 font-JakartaSemiBold text-[15px] flex-1 ${inputStyle} text-left`}
-              secureTextEntry={secureTextEntry}
-              {...props}
-            />
-          </View>
-        </View>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+    <View className={`my-2 w-full ${className}`}>
+      <Text className={`mb-3 font-rubik text-base text-black-300 ${labelStyle}`}>
+        {label}
+      </Text>
+      <View
+        className={`flex flex-row items-center rounded-[24px] border border-primary-200 bg-white px-2 ${containerStyle}`}
+      >
+        {icon && (
+          <Image source={icon} className={`w-6 h-6 ml-4 ${iconStyle}`} />
+        )}
+        <TextInput
+          className={`flex-1 rounded-[24px] p-4 font-rubik text-[15px] text-black-300 ${inputStyle}`}
+          placeholderTextColor="#71806f"
+          secureTextEntry={secureTextEntry}
+          style={Platform.OS === "web" ? ({ outlineStyle: "none" } as never) : undefined}
+          {...props}
+        />
+      </View>
+    </View>
   );
 };
   

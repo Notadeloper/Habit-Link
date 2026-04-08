@@ -107,6 +107,20 @@ export const getGroupsForUser: RequestHandler = async (req, res) => {
                     },
                 },
             },
+            include: {
+                memberships: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                username: true,
+                                fullName: true,
+                            },
+                        },
+                    },
+                },
+                groupHabit: true,
+            },
         });
 
         res.status(200).json({ groups });

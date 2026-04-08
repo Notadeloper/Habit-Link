@@ -1,35 +1,45 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-    // NOTE: Update this to include the paths to all of your component files.
-    content: ["./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
-    presets: [require("nativewind/preset")],
-    theme: {
-      extend: {
-        fontFamily: {
-            rubik: ['Rubik-Bold', 'sans-serif'],
-            rubik: ['Rubik-Regular', 'sans-serif']
+  content: [
+    "./app/**/*.{js,jsx,ts,tsx}",
+    "./components/**/*.{js,jsx,ts,tsx}",
+    "./constants/**/*.{js,jsx,ts,tsx}",
+  ],
+  presets: [require("nativewind/preset")],
+  theme: {
+    extend: {
+      fontFamily: {
+        rubik: ["Rubik-Regular", "sans-serif"],
+        "rubik-bold": ["Rubik-Bold", "sans-serif"],
+      },
+      colors: {
+        primary: {
+          50: "#f4fbf5",
+          100: "#dceede",
+          200: "#b9dabb",
+          300: "#93c47d",
+          400: "#6da95a",
+          500: "#4e8f40",
+          600: "#3b7130",
+          700: "#305927",
+          800: "#284721",
+          900: "#223b1e",
         },
-        colors: {
-            blue: {
-                DEFAULT: "#3B82F6",
-            },
-            primary: {
-              100: "#93c47d0A",
-              200: "#93c47d1A",
-              300: "#93c47d",
-            },
-            accent: {
-              100: "#FBFBFD",
-            },
-            black: {
-              DEFAULT: "#000000",
-              100: "#8C8E98",
-              200: "#666876",
-              300: "#191D31",
-            },
-            danger: "#F75555",
-          },
+        accent: {
+          100: "#f8f5ec",
+          200: "#efe8d1",
+        },
+        black: {
+          DEFAULT: "#122013",
+          100: "#71806f",
+          200: "#3f4e40",
+          300: "#18231a",
+        },
+        success: "#2f8f56",
+        warning: "#d08f2b",
+        danger: "#c94f45",
       },
     },
-    plugins: [],
-  }
+  },
+  plugins: [],
+};

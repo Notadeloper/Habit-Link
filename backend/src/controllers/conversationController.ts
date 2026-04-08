@@ -18,8 +18,22 @@ export const getConversationsDM: RequestHandler = async (req, res) => {
                 },
             },
             include: {
-                participants: true,
-                messages: true,
+                participants: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                username: true,
+                                fullName: true,
+                            },
+                        },
+                    },
+                },
+                messages: {
+                    orderBy: {
+                        created_at: "desc",
+                    },
+                },
             },
             orderBy: {
                 updated_at: "desc",
@@ -55,7 +69,17 @@ export const getConversation: RequestHandler = async (req, res) => {
                 },
             },
             include: {
-                participants: true,
+                participants: {
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                username: true,
+                                fullName: true,
+                            },
+                        },
+                    },
+                },
                 messages: {
                     orderBy: {
                         created_at: "desc",

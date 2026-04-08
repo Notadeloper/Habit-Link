@@ -221,7 +221,17 @@ export const getFriendRequests: RequestHandler = async (req, res) => {
             select: {
                 id: true,
                 username: true,
-                receivedFriendRequests: true
+                receivedFriendRequests: {
+                    include: {
+                        sender: {
+                            select: {
+                                id: true,
+                                username: true,
+                                fullName: true,
+                            },
+                        },
+                    },
+                }
             },
         });
 
